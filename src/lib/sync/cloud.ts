@@ -1,6 +1,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { setCurrency } from '../money';
+import { PREVIEW } from '../preview';
 import { useStore } from '../store';
 import type { BudgetData } from '../types';
 import { adoptRemote, freshState, replaceRemote, syncOnce, type SyncState } from './engine';
@@ -8,7 +9,8 @@ import { SupabaseRemote } from './supabaseRemote';
 
 const URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
-export const syncConfigured = Boolean(URL && KEY);
+// Previews never sync, so testing a pull request can't change the real budget.
+export const syncConfigured = Boolean(URL && KEY) && !PREVIEW;
 
 const STATE_KEY = 'tyler-finance-sync';
 const PUSH_DELAY_MS = 1200;

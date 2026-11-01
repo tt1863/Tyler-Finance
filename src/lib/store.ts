@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setCurrency } from './money';
 import { normalize } from './ops';
+import { STORAGE_KEY } from './preview';
 import type { BudgetData } from './types';
 
 interface StoreState {
@@ -37,7 +38,7 @@ export const useStore = create<StoreState>()(
       },
     }),
     {
-      name: 'tyler-finance',
+      name: STORAGE_KEY,
       partialize: (s) => ({ data: s.data }),
       merge: (persisted, current) => {
         const data = (persisted as { data?: BudgetData | null })?.data;

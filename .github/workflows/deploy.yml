@@ -1,14 +1,20 @@
 name: Deploy to GitHub Pages
 
+# Publishes the live app (from main) plus a preview of every open pull request
+# at /preview/<branch>/. Pull request events use pull_request_target so the
+# workflow always runs from main's copy of this file and may deploy to Pages.
 on:
   push:
     branches: [main]
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
 concurrency:
   group: pages
@@ -16,19 +22,31 @@ concurrency:
 
 jobs:
   build:
+    # Never run for pull requests from forks.
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - name: Build app and pull request previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/build-site.sh
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      - name: Remember which previews were built
+        uses: actions/upload-artifact@v4
+        with:
+          name: previews
+          path: previews.txt
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -38,3 +56,29 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  comment:
+    # Post the preview link on each pull request once.
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: previews
+      - name: Comment preview links
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SITE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          while read -r number slug; do
+            [ -z "${number:-}" ] && continue
+            marker="<!-- preview-link -->"
+            if gh pr view "$number" --repo "$REPO" --json comments --jq '.comments[].body' | grep -q "$marker"; then
+              continue
+            fi
+            gh pr comment "$number" --repo "$REPO" --body "$marker
+          🧪 **Preview:** $SITE/preview/$slug/
+
+          Open it in Safari to try this change before merging. It has its own separate data (start with sample data) and never syncs, so your real budget isn't affected. The preview updates within a couple of minutes of each new push."
+          done < previews.txt
