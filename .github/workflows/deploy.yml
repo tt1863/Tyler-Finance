@@ -80,5 +80,5 @@ jobs:
             gh pr comment "$number" --repo "$REPO" --body "$marker
           🧪 **Preview:** $SITE/preview/$slug/
 
-          Open it in Safari to try this change before merging. It has its own separate data (start with sample data) and never syncs, so your real budget isn't affected. The preview updates within a couple of minutes of each new push."
+          Open it in Safari to try this change before merging. It has its own separate data (start with sample data). To test sign-in, sync or banks, use a test email like you+test@gmail.com, never your real one. The preview updates within a couple of minutes of each new push."
           done < previews.txt

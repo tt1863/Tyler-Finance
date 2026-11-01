@@ -165,6 +165,8 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     amount: draft.amount,
     cleared: draft.cleared,
   };
+  // Keep the link to the bank transaction so later bank updates find it.
+  if (existing?.bankId) tx.bankId = existing.bankId;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
     const from = accounts.get(draft.accountId);

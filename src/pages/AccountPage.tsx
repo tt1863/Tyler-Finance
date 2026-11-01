@@ -175,7 +175,14 @@ export default function AccountPage({ accountId }: { accountId: string }) {
               </span>
               <span className="date">{dateLabel(t.date)}</span>
               {isAll && <span className="acct truncate">{accountName.get(t.accountId)}</span>}
-              <span className="payee truncate">{t.payee || <i className="muted">No payee</i>}</span>
+              <span className="payee truncate">
+                {t.bankId && (
+                  <span className="bank-mark" title="Imported from your bank">
+                    🏦{' '}
+                  </span>
+                )}
+                {t.payee || <i className="muted">No payee</i>}
+              </span>
               <span className={`category truncate ${needs ? 'needs' : ''}`}>
                 {needs && !t.splits ? 'Needs category' : t.transferAccountId && !t.categoryId ? '' : transactionCategoryLabel(data, t)}
               </span>

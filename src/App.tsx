@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { ChooseBudgetModal } from './components/SyncPanel';
-import { startSync } from './lib/sync/cloud';
+import { maybeAutoSync } from './lib/bank/api';
+import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
 import ReportsPage from './pages/ReportsPage';
@@ -24,6 +25,16 @@ export default function App() {
   useEffect(() => {
     void startSync();
   }, []);
+
+  // Check linked banks for new transactions when the app opens or comes back
+  // to the foreground (at most every 30 minutes).
+  const syncStatus = useSync((s) => s.status);
+  useEffect(() => {
+    if (syncStatus === 'synced') maybeAutoSync();
+    const onVisible = () => document.visibilityState === 'visible' && maybeAutoSync();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [syncStatus]);
 
   // Enter scheduled transactions that have come due, on open and whenever the
   // app comes back to the foreground (e.g. reopened from the home screen).

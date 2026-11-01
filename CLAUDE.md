@@ -10,7 +10,11 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - When a feature is ready, open a pull request into `main`. Merging the PR deploys it.
 - Every open pull request gets a preview at `/preview/<branch-without-claude/>/`
   (built by `scripts/build-site.sh`; the workflow comments the link on the PR).
-  Previews use separate storage and never sync, so they can't touch the real budget.
+  Previews use separate storage (and their own sign-in); they refuse the real
+  budget's email, so test sync/banks there with an address like you+test@gmail.com.
+- Server functions (`supabase/functions/`) deploy via `.github/workflows/functions.yml`
+  on pushes to `main` and `claude/**` (needs the `SUPABASE_ACCESS_TOKEN` repo secret).
+  Database changes are SQL files in `supabase/` that the owner runs in the SQL Editor.
 - Merge only when the owner says the feature is ready to ship.
 - Before pushing: `npm run typecheck`, `npm test`, `npm run build`, and check the UI
   at phone width (the owner mainly uses the app on a phone).
@@ -22,6 +26,9 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - `src/lib/store.ts` — zustand store persisted to localStorage (key `tyler-finance`).
   New data fields need a default in `normalize()` so older saved budgets keep loading.
 - Money is integer cents; positive = inflow.
+- Linked banks (Plaid): `supabase/functions/bank` (app calls), `bank-webhook` (Plaid calls),
+  `_shared/importPlan.ts` (pure import/matching logic, unit-tested), `supabase/bank.sql`.
+  Imported transactions have `bankId`; edits must keep it (see `saveTransaction`).
 
 ## Phone layout rules
 
