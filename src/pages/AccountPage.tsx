@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
-import { categoryName } from '../components/CategorySelect';
+import { transactionCategoryLabel } from '../components/CategorySelect';
 import ImportModal from '../components/ImportModal';
 import ScheduledList from '../components/ScheduledList';
 import Modal from '../components/Modal';
@@ -44,7 +44,8 @@ export default function AccountPage({ accountId }: { accountId: string }) {
           !q ||
           t.payee.toLowerCase().includes(q) ||
           t.memo.toLowerCase().includes(q) ||
-          categoryName(data, t.categoryId).toLowerCase().includes(q) ||
+          transactionCategoryLabel(data, t).toLowerCase().includes(q) ||
+          t.splits?.some((p) => p.memo.toLowerCase().includes(q)) ||
           (t.amount / 100).toFixed(2).includes(q),
       )
       .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
@@ -176,7 +177,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
               {isAll && <span className="acct truncate">{accountName.get(t.accountId)}</span>}
               <span className="payee truncate">{t.payee || <i className="muted">No payee</i>}</span>
               <span className={`category truncate ${needs ? 'needs' : ''}`}>
-                {needs ? 'Needs category' : t.transferAccountId && !t.categoryId ? '' : categoryName(data, t.categoryId)}
+                {needs && !t.splits ? 'Needs category' : t.transferAccountId && !t.categoryId ? '' : transactionCategoryLabel(data, t)}
               </span>
               <span className="memo truncate muted">{t.memo}</span>
               <span className="num out">{t.amount < 0 ? fmt(-t.amount) : ''}</span>

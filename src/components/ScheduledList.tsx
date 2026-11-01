@@ -4,7 +4,7 @@ import { fmt } from '../lib/money';
 import { enterNow, frequencyLabel, nextDate, skipNext } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
 import type { Scheduled } from '../lib/types';
-import { categoryName } from './CategorySelect';
+import { transactionCategoryLabel } from './CategorySelect';
 import TransactionForm from './TransactionForm';
 
 /** Upcoming scheduled transactions for one account (or all accounts). */
@@ -46,7 +46,7 @@ export default function ScheduledList({ accountId }: { accountId: string }) {
                 <b className="truncate">{payee || 'No payee'}</b>
                 <span className="muted small truncate">
                   {isAll && `${accountName(s.accountId)} · `}
-                  {s.transferAccountId ? 'Transfer' : categoryName(data, s.categoryId) || 'No category'}
+                  {s.transferAccountId ? 'Transfer' : transactionCategoryLabel(data, s) || 'No category'}
                 </span>
               </span>
               <span className={`num ${amount < 0 ? 'neg' : 'pos'}`}>{fmt(amount)}</span>

@@ -96,6 +96,7 @@ function enter(data: BudgetData, s: Scheduled, date: DateStr): BudgetData {
     amount: s.amount,
     cleared: 'uncleared',
     transferAccountId: s.transferAccountId,
+    splits: s.splits,
   });
 }
 

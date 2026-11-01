@@ -31,20 +31,26 @@ export default function SettingsPage() {
     const accounts = new Map(data.accounts.map((a) => [a.id, a.name]));
     const lines = [['Account', 'Date', 'Payee', 'Category', 'Memo', 'Outflow', 'Inflow', 'Cleared'].join(',')];
     for (const t of [...data.transactions].sort((a, b) => a.date.localeCompare(b.date))) {
-      lines.push(
-        [
-          accounts.get(t.accountId) ?? '',
-          t.date,
-          t.payee,
-          categoryName(data, t.categoryId),
-          t.memo,
-          t.amount < 0 ? (-t.amount / 100).toFixed(2) : '',
-          t.amount > 0 ? (t.amount / 100).toFixed(2) : '',
-          t.cleared,
-        ]
-          .map((v) => csvCell(String(v)))
-          .join(','),
-      );
+      // Split transactions are exported as one row per part.
+      const parts = t.splits?.length
+        ? t.splits.map((p) => ({ categoryId: p.categoryId, amount: p.amount, memo: [t.memo, p.memo].filter(Boolean).join(' / ') }))
+        : [{ categoryId: t.categoryId, amount: t.amount, memo: t.memo }];
+      for (const p of parts) {
+        lines.push(
+          [
+            accounts.get(t.accountId) ?? '',
+            t.date,
+            t.payee,
+            categoryName(data, p.categoryId),
+            p.memo,
+            p.amount < 0 ? (-p.amount / 100).toFixed(2) : '',
+            p.amount > 0 ? (p.amount / 100).toFixed(2) : '',
+            t.cleared,
+          ]
+            .map((v) => csvCell(String(v)))
+            .join(','),
+        );
+      }
     }
     download(`transactions-${today()}.csv`, lines.join('\n'), 'text/csv');
   };

@@ -1,15 +1,21 @@
 import { useMemo, useState } from 'react';
 import { today } from '../lib/dates';
-import { parseMoney, toInput } from '../lib/money';
+import { fmt, parseMoney, toInput } from '../lib/money';
 import { deleteTransactions, saveTransaction } from '../lib/ops';
 import { deleteScheduled, FREQUENCIES, nextDate, processDue, saveScheduled } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
-import type { BudgetData, Frequency, Scheduled, Transaction } from '../lib/types';
+import type { BudgetData, Frequency, Scheduled, Split, Transaction } from '../lib/types';
 import { READY_TO_ASSIGN } from '../lib/types';
 import CategorySelect from './CategorySelect';
 import Modal from './Modal';
 
 const TRANSFER_PREFIX = 'Transfer : ';
+
+interface SplitRow {
+  categoryId: string | null;
+  amount: string;
+  memo: string;
+}
 
 export default function TransactionForm({
   transaction: tx,
@@ -41,6 +47,19 @@ export default function TransactionForm({
   const [amount, setAmount] = useState(toInput(Math.abs(transaction?.amount ?? 0)));
   const [cleared, setCleared] = useState(transaction?.cleared ?? 'uncleared');
   const [error, setError] = useState('');
+  // Split parts as entered: amounts are in the same direction as the total
+  // (a leading "-" means the opposite, e.g. a return inside a purchase).
+  const sign = direction === 'out' ? -1 : 1;
+  const [splits, setSplits] = useState<SplitRow[] | null>(
+    transaction?.splits?.length
+      ? transaction.splits.map((p) => ({ categoryId: p.categoryId, amount: toInput(p.amount * (transaction.amount < 0 ? -1 : 1)), memo: p.memo }))
+      : null,
+  );
+  const total = parseMoney(amount) ?? 0;
+  const splitSum = (splits ?? []).reduce((sum, p) => sum + (parseMoney(p.amount) ?? 0), 0);
+  const remaining = Math.abs(total) - splitSum;
+  const setPart = (i: number, patch: Partial<SplitRow>) =>
+    setSplits((rows) => rows && rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   const account = data.accounts.find((a) => a.id === accountId);
   const payees = useMemo(() => {
@@ -67,6 +86,13 @@ export default function TransactionForm({
     if (cents === null) return setError('Enter a valid amount.');
     if (payee.startsWith(TRANSFER_PREFIX) && !transferTarget) return setError('Choose a valid account to transfer to.');
     const signed = direction === 'out' ? -Math.abs(cents) : Math.abs(cents);
+    let splitParts: Split[] | undefined;
+    if (splits && needsCategory && !transferTarget) {
+      if (splits.length < 2) return setError('A split needs at least two parts.');
+      if (splits.some((p) => parseMoney(p.amount) === null)) return setError('Check the split amounts.');
+      if (remaining !== 0) return setError(`Split parts must add up to the total (${fmt(Math.abs(remaining))} ${remaining > 0 ? 'left' : 'over'}).`);
+      splitParts = splits.map((p) => ({ categoryId: p.categoryId, amount: sign * (parseMoney(p.amount) ?? 0), memo: p.memo }));
+    }
     const fields = {
       accountId,
       payee: transferTarget ? `${TRANSFER_PREFIX}${transferTarget.name}` : payee.trim(),
@@ -74,6 +100,7 @@ export default function TransactionForm({
       memo: memo.trim(),
       amount: signed,
       transferAccountId: transferTarget?.id,
+      splits: splitParts,
     };
     // Repeating transactions, and one-time transactions dated in the future,
     // become scheduled transactions. Anything already due is entered now.
@@ -105,11 +132,13 @@ export default function TransactionForm({
         amount: signed,
         cleared,
         transferAccountId: transferTarget?.id,
+        splits: splitParts,
       }),
     );
     if (addAnother) {
       setPayee('');
       setCategoryId(null);
+      setSplits(null);
       setMemo('');
       setAmount('');
       setError('');
@@ -173,8 +202,62 @@ export default function TransactionForm({
             ))}
           </datalist>
         </label>
+        {needsCategory && !transferTarget && splits ? (
+          <fieldset className="split-box">
+            <legend>
+              Split into categories
+              <button type="button" className="link-btn small" onClick={() => setSplits(null)}>
+                Cancel split
+              </button>
+            </legend>
+            {splits.map((p, i) => (
+              <div key={i} className="split-row">
+                <CategorySelect data={data} value={p.categoryId} onChange={(id) => setPart(i, { categoryId: id })} includeRta includeNone="Choose category" />
+                <input inputMode="decimal" aria-label="Split amount" placeholder="0.00" value={p.amount} onChange={(e) => setPart(i, { amount: e.target.value })} />
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Remove part"
+                  disabled={splits.length <= 2}
+                  onClick={() => setSplits(splits.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </button>
+                <input className="split-memo" placeholder="Memo (optional)" value={p.memo} onChange={(e) => setPart(i, { memo: e.target.value })} />
+              </div>
+            ))}
+            <div className="split-foot">
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => setSplits([...splits, { categoryId: null, amount: remaining > 0 ? toInput(remaining) : '', memo: '' }])}
+              >
+                + Add part
+              </button>
+              <span className={remaining === 0 ? 'good' : 'neg'}>
+                {remaining === 0 ? '✓ Fully split' : `${fmt(Math.abs(remaining))} ${remaining > 0 ? 'left to split' : 'over the total'}`}
+              </span>
+            </div>
+          </fieldset>
+        ) : (
         <label>
-          Category
+          <span className="label-row">
+            Category
+            {needsCategory && !transferTarget && (
+              <button
+                type="button"
+                className="link-btn small"
+                onClick={() =>
+                  setSplits([
+                    { categoryId, amount: amount, memo: '' },
+                    { categoryId: null, amount: '', memo: '' },
+                  ])
+                }
+              >
+                Split
+              </button>
+            )}
+          </span>
           {needsCategory ? (
             <CategorySelect data={data} value={categoryId} onChange={setCategoryId} includeRta includeNone="Uncategorized" />
           ) : (
@@ -183,6 +266,7 @@ export default function TransactionForm({
             </select>
           )}
         </label>
+        )}
         {needsCategory && categoryId === READY_TO_ASSIGN && direction === 'out' && (
           <p className="hint">Outflows to Ready to Assign reduce money available to assign.</p>
         )}

@@ -53,6 +53,12 @@ export default function CategorySelect({
   );
 }
 
+/** Category label for a transaction, e.g. "Groceries" or "Split: Groceries, Household". */
+export function transactionCategoryLabel(data: BudgetData, t: { categoryId: string | null; splits?: { categoryId: string | null }[] }): string {
+  if (t.splits?.length) return `Split: ${t.splits.map((p) => categoryName(data, p.categoryId) || 'Uncategorized').join(', ')}`;
+  return categoryName(data, t.categoryId);
+}
+
 export function categoryName(data: BudgetData, id: string | null): string {
   if (id === READY_TO_ASSIGN) return 'Ready to Assign';
   if (!id) return '';
