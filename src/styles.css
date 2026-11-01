@@ -775,6 +775,21 @@ textarea:focus {
   margin: 0;
 }
 
+/* Pull request preview banner */
+.preview-banner {
+  grid-column: 1 / -1;
+  background: #fde047;
+  color: #422006;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  padding-top: max(0.45rem, env(safe-area-inset-top));
+  text-align: center;
+}
+
+.app.has-banner {
+  grid-template-rows: auto 1fr;
+}
+
 /* Sync */
 .sync-badge {
   font-size: 0.8rem;
@@ -1181,6 +1196,9 @@ textarea:focus {
   .app {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
+  }
+  .app.has-banner {
+    grid-template-rows: auto auto 1fr;
   }
   /* The chart's SVG is scaled down on phones, so draw its text larger. */
   .chart .axis {

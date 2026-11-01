@@ -8,6 +8,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
 import { today } from './lib/dates';
+import { PREVIEW } from './lib/preview';
 import { useRoute } from './lib/route';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
@@ -52,9 +53,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo]);
 
+  const banner = PREVIEW ? (
+    <div className="preview-banner">
+      🧪 Preview: <b>{PREVIEW}</b> — test copy with its own data. Your real budget isn't affected.
+    </div>
+  ) : null;
+
   if (!data)
     return (
       <>
+        {banner}
         <Welcome />
         <ChooseBudgetModal />
       </>
@@ -68,7 +76,8 @@ export default function App() {
   else content = <BudgetPage month={arg} />;
 
   return (
-    <div className="app">
+    <div className={`app ${PREVIEW ? 'has-banner' : ''}`}>
+      {banner}
       <header className="topbar">
         <button className="icon-btn" aria-label="Menu" onClick={() => setMenuOpen((o) => !o)}>
           ☰
