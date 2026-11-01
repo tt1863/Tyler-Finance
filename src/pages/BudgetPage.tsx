@@ -4,10 +4,11 @@ import GroupModal from '../components/GroupModal';
 import MoneyInput from '../components/MoneyInput';
 import MoveMoneyModal from '../components/MoveMoneyModal';
 import { categoryMonth, computeBudget, targetStatus, underfundedAmount } from '../lib/budget';
-import { addMonths, currentMonth, monthLabel } from '../lib/dates';
+import { addDays, addMonths, currentMonth, monthLabel, today } from '../lib/dates';
 import { fmt } from '../lib/money';
 import { addCategory, addGroup, assignLastMonth, assignUnderfunded, needsCategory, setAssigned } from '../lib/ops';
 import { go } from '../lib/route';
+import { upcoming } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
 import type { Category, CategoryGroup } from '../lib/types';
 
@@ -22,6 +23,18 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   const [moving, setMoving] = useState<{ categoryId: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const uncategorized = useMemo(() => needsCategory(data).length, [data]);
+  // Scheduled transactions still to come in this month, by category.
+  const upcomingByCat = useMemo(() => {
+    const start = month === currentMonth() ? today() : `${month}-01`;
+    const end = addDays(`${addMonths(month, 1)}-01`, -1);
+    const out: Record<string, number> = {};
+    if (month < currentMonth()) return out;
+    for (const u of upcoming(data, start, end)) {
+      const id = u.scheduled.categoryId;
+      if (id) out[id] = (out[id] ?? 0) + u.scheduled.amount;
+    }
+    return out;
+  }, [data, month]);
 
   const rta = summary.readyToAssign;
   const totalUnderfunded = data.categories
@@ -188,6 +201,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
               category={selectedCat}
               month={month}
               cm={categoryMonth(summary, selectedCat.id)}
+              upcomingAmount={upcomingByCat[selectedCat.id] ?? 0}
               onEdit={() => setEditingCat(selectedCat)}
               onAssign={(v) => update((d) => setAssigned(d, month, selectedCat.id, v))}
             />
@@ -237,10 +251,12 @@ function CategoryInspector({
   cm,
   onEdit,
   onAssign,
+  upcomingAmount,
 }: {
   category: Category;
   month: string;
   cm: ReturnType<typeof categoryMonth>;
+  upcomingAmount: number;
   onEdit: () => void;
   onAssign: (v: number) => void;
 }) {
@@ -257,6 +273,14 @@ function CategoryInspector({
         <dd>{fmt(cm.activity)}</dd>
         <dt>Available</dt>
         <dd className={cm.available < 0 ? 'neg' : ''}>{fmt(cm.available)}</dd>
+        {upcomingAmount !== 0 && (
+          <>
+            <dt>Scheduled later this month</dt>
+            <dd>{fmt(upcomingAmount)}</dd>
+            <dt>Available after scheduled</dt>
+            <dd className={cm.available + upcomingAmount < 0 ? 'neg' : ''}>{fmt(cm.available + upcomingAmount)}</dd>
+          </>
+        )}
       </dl>
       {ts ? (
         <div className="target-box">

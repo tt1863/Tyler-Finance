@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setCurrency } from './money';
+import { normalize } from './ops';
 import type { BudgetData } from './types';
 
 interface StoreState {
@@ -27,7 +28,7 @@ export const useStore = create<StoreState>()(
       },
       replace: (data) => {
         if (data) setCurrency(data.currency);
-        set({ data, history: [] });
+        set({ data: data && normalize(data), history: [] });
       },
       undo: () => {
         const history = get().history;
@@ -38,6 +39,10 @@ export const useStore = create<StoreState>()(
     {
       name: 'tyler-finance',
       partialize: (s) => ({ data: s.data }),
+      merge: (persisted, current) => {
+        const data = (persisted as { data?: BudgetData | null })?.data;
+        return { ...current, data: data ? normalize(data) : null };
+      },
       onRehydrateStorage: () => (state) => {
         if (state?.data) setCurrency(state.data.currency);
       },

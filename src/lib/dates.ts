@@ -67,3 +67,18 @@ export function parseDate(input: string): DateStr | null {
   }
   return null;
 }
+
+export function addDays(date: DateStr, n: number): DateStr {
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+/** Add months to a date, clamping to the end of shorter months (Jan 31 + 1 → Feb 28). */
+export function addMonthsToDate(date: DateStr, n: number): DateStr {
+  const [y, m, d] = date.split('-').map(Number);
+  const target = addMonths(`${y}-${pad(m)}`, n);
+  const [ty, tm] = target.split('-').map(Number);
+  const lastDay = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+  return `${target}-${pad(Math.min(d, lastDay))}`;
+}

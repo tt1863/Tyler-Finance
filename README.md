@@ -19,6 +19,10 @@ them, and move money around when plans change.
 - **Transactions** — add/edit/delete, transfers between accounts (pick
   "Transfer : Account" as the payee), cleared/uncleared, search, bulk delete,
   payee auto-categorization, and a "needs category" filter.
+- **Recurring transactions** — set a transaction to repeat (weekly, every 2
+  weeks, monthly, every 3/6 months, yearly) with an optional end date. Due ones
+  are entered automatically when you open the app; upcoming ones are listed in
+  each account with Enter now / Skip. Future-dated transactions wait until their date.
 - **Reconcile** — match the cleared balance to your bank and lock it in.
 - **CSV import** from your bank, with duplicate detection.
 - **Reports** — spending by category/group, income vs spending, net worth.
@@ -54,5 +58,5 @@ The core logic lives in `src/lib/budget.ts` (calculations) and `src/lib/ops.ts`
 
 ## Not yet built
 
-Bank syncing, scheduled/recurring transactions, split transactions,
+Bank syncing, split transactions,
 multi-device sync / login, and age-of-money.

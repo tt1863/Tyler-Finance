@@ -22,10 +22,16 @@ export function emptyData(): BudgetData {
     groups: [],
     categories: [],
     transactions: [],
+    scheduled: [],
     assigned: {},
     payeeCategory: {},
     currency: 'USD',
   };
+}
+
+/** Fill in fields added after a budget was first saved. */
+export function normalize(data: BudgetData): BudgetData {
+  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [] };
 }
 
 /** A starter set of categories similar to YNAB's defaults. */
@@ -113,6 +119,7 @@ export function deleteAccount(data: BudgetData, id: string): BudgetData {
   );
   d.transactions = d.transactions.filter((t) => !removed.has(t.id));
   d.accounts = d.accounts.filter((a) => a.id !== id);
+  d.scheduled = d.scheduled.filter((s) => s.accountId !== id && s.transferAccountId !== id);
   const payCat = d.categories.find((c) => c.ccAccountId === id);
   if (payCat) d = removeCategoryRefs(d, payCat.id, null);
   return d;
@@ -297,6 +304,7 @@ export function deleteCategory(data: BudgetData, id: string, reassignTo: string 
 
 function removeCategoryRefs(d: BudgetData, id: string, reassignTo: string | null): BudgetData {
   for (const t of d.transactions) if (t.categoryId === id) t.categoryId = reassignTo;
+  for (const s of d.scheduled) if (s.categoryId === id) s.categoryId = reassignTo;
   for (const row of Object.values(d.assigned)) {
     if (row[id] !== undefined) {
       if (reassignTo && reassignTo !== READY_TO_ASSIGN) row[reassignTo] = (row[reassignTo] ?? 0) + row[id];

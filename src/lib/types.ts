@@ -69,12 +69,40 @@ export interface Transaction {
   transferTxId?: string;
 }
 
+export type Frequency =
+  | 'once'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'semiannually'
+  | 'yearly';
+
+/** A recurring (or one-time future) transaction that's entered automatically when due. */
+export interface Scheduled {
+  id: string;
+  accountId: string;
+  payee: string;
+  categoryId: string | null;
+  memo: string;
+  amount: Cents;
+  transferAccountId?: string;
+  frequency: Frequency;
+  /** First occurrence; later ones are computed from it so monthly dates don't drift. */
+  startDate: DateStr;
+  /** How many occurrences have been entered or skipped. */
+  count: number;
+  /** Optional last date to repeat on. */
+  endDate?: DateStr;
+}
+
 export interface BudgetData {
   version: 1;
   accounts: Account[];
   groups: CategoryGroup[];
   categories: Category[];
   transactions: Transaction[];
+  scheduled: Scheduled[];
   /** assigned[month][categoryId] = cents assigned that month. */
   assigned: Record<MonthKey, Record<string, Cents>>;
   /** Payee name -> last category used, to auto-fill new transactions. */

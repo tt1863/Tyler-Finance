@@ -1,5 +1,6 @@
-import { addMonths, currentMonth } from './dates';
+import { addMonths, currentMonth, today as todayStr } from './dates';
 import { addAccount, saveTransaction, setAssigned, starterData, updateCategory } from './ops';
+import { saveScheduled } from './scheduled';
 import type { BudgetData } from './types';
 import { READY_TO_ASSIGN } from './types';
 
@@ -91,5 +92,20 @@ export function demoData(): BudgetData {
   // Fund the card payment so it matches what's owed, and move savings into the emergency fund.
   for (let i = 0; i < 3; i++) d = setAssigned(d, addMonths(start, i), visaPay, i === 0 ? 12000 : 15000);
   d = setAssigned(d, start, cat('Emergency Fund'), 525000);
+
+  // Recurring bills and income, starting from their next date.
+  const next = (day: number) => {
+    const thisMonth = `${now}-${String(day).padStart(2, '0')}`;
+    return thisMonth > todayStr() ? thisMonth : `${addMonths(now, 1)}-${String(day).padStart(2, '0')}`;
+  };
+  const schedule = (payee: string, category: string | null, amount: number, day: number, account = checking, transferAccountId?: string) => {
+    d = saveScheduled(d, { accountId: account, payee, categoryId: category, memo: '', amount, frequency: 'monthly', startDate: next(day), transferAccountId });
+  };
+  schedule('Acme Corp Payroll', READY_TO_ASSIGN, 215000, 15);
+  schedule('Acme Corp Payroll', READY_TO_ASSIGN, 215000, 1);
+  schedule('Oakwood Apartments', cat('Rent/Mortgage'), -145000, 1);
+  schedule('FiberNet', cat('Internet'), -6500, 8);
+  schedule('StreamFlix', cat('Entertainment'), -1599, 11, visa);
+  schedule('Transfer : Savings', null, -25000, 2, checking, savings);
   return d;
 }

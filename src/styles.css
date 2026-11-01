@@ -676,6 +676,52 @@ textarea:focus {
   display: block;
 }
 
+/* Scheduled transactions */
+.scheduled {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.scheduled-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  background: var(--surface-2);
+  border: none;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.sched-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) 110px auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+}
+.sched-row:hover {
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+.sched-date,
+.sched-main {
+  display: flex;
+  flex-direction: column;
+}
+.sched-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
 /* Modal & forms */
 .modal-backdrop {
   position: fixed;
@@ -1149,6 +1195,24 @@ textarea:focus {
   }
   .reg-row.head {
     display: none;
+  }
+  .scheduled-head .small {
+    display: none;
+  }
+  .sched-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem 0.6rem;
+  }
+  .sched-date {
+    order: 3;
+    flex-direction: row;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-2);
+  }
+  .sched-actions {
+    order: 4;
+    justify-content: flex-end;
   }
   .reg-row > span:first-child {
     grid-area: sel;

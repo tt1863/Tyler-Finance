@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
 import { categoryName } from '../components/CategorySelect';
 import ImportModal from '../components/ImportModal';
+import ScheduledList from '../components/ScheduledList';
 import Modal from '../components/Modal';
 import TransactionForm from '../components/TransactionForm';
 import { accountBalances } from '../lib/budget';
@@ -147,6 +148,8 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         </label>
         <input className="search" type="search" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
+
+      <ScheduledList accountId={accountId} />
 
       <div className={`register ${isAll ? 'with-account' : ''}`}>
         <div className="reg-row head">

@@ -5,7 +5,9 @@ import BudgetPage from './pages/BudgetPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
+import { today } from './lib/dates';
 import { useRoute } from './lib/route';
+import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
 
 export default function App() {
@@ -15,6 +17,21 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
+
+  // Enter scheduled transactions that have come due, on open and whenever the
+  // app comes back to the foreground (e.g. reopened from the home screen).
+  useEffect(() => {
+    const run = () => {
+      const current = useStore.getState().data;
+      if (current && processDue(current, today()).entered > 0) {
+        useStore.getState().update((d) => processDue(d, today()).data);
+      }
+    };
+    run();
+    const onVisible = () => document.visibilityState === 'visible' && run();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [!!data]);
 
   // Ctrl/Cmd+Z undoes the last change (except while typing in a field).
   useEffect(() => {
