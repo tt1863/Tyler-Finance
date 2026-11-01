@@ -769,6 +769,28 @@ textarea:focus {
   margin: 0;
 }
 
+/* Sync */
+.sync-badge {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.6rem;
+  opacity: 0.85;
+}
+.sync-badge.inline {
+  padding: 0;
+  opacity: 1;
+}
+.sidebar .sync-badge.error,
+.sidebar .sync-badge.choose {
+  color: #ffd8a8;
+}
+.welcome-sync {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.welcome-signin {
+  box-shadow: none;
+}
+
 /* Modal & forms */
 .modal-backdrop {
   position: fixed;

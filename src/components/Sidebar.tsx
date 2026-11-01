@@ -4,6 +4,7 @@ import { fmt } from '../lib/money';
 import { useData } from '../lib/store';
 import type { Account } from '../lib/types';
 import AccountForm from './AccountForm';
+import { SyncBadge } from './SyncPanel';
 
 export default function Sidebar({
   open,
@@ -75,6 +76,7 @@ export default function Sidebar({
         <a href="#/settings" className={`nav-link settings-link ${current === 'settings' ? 'active' : ''}`}>
           ⚙️ Settings & Data
         </a>
+        <SyncBadge />
       </nav>
       {adding && <AccountForm onClose={() => setAdding(false)} />}
     </>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
+import { ChooseBudgetModal } from './components/SyncPanel';
+import { startSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
 import ReportsPage from './pages/ReportsPage';
@@ -17,6 +19,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
+
+  useEffect(() => {
+    void startSync();
+  }, []);
 
   // Enter scheduled transactions that have come due, on open and whenever the
   // app comes back to the foreground (e.g. reopened from the home screen).
@@ -46,7 +52,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo]);
 
-  if (!data) return <Welcome />;
+  if (!data)
+    return (
+      <>
+        <Welcome />
+        <ChooseBudgetModal />
+      </>
+    );
 
   const [page = 'budget', arg] = route;
   let content;
@@ -65,6 +77,7 @@ export default function App() {
       </header>
       <Sidebar open={menuOpen} current={page} currentArg={arg} onClose={() => setMenuOpen(false)} />
       <main className="main">{content}</main>
+      <ChooseBudgetModal />
     </div>
   );
 }

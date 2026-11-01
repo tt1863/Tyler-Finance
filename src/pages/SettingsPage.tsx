@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
+import SyncPanel from '../components/SyncPanel';
+import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
 import { demoData } from '../lib/demo';
 import { setCurrency } from '../lib/money';
@@ -26,6 +28,8 @@ export default function SettingsPage() {
   const undo = useStore((s) => s.undo);
   const canUndo = useStore((s) => s.history.length > 0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const syncStatus = useSync((s) => s.status);
+  const signedIn = syncStatus !== 'disabled' && syncStatus !== 'signed-out';
 
   const exportCsv = () => {
     const accounts = new Map(data.accounts.map((a) => [a.id, a.name]));
@@ -71,6 +75,8 @@ export default function SettingsPage() {
     <div className="settings-page">
       <h1>Settings & Data</h1>
 
+      <SyncPanel />
+
       <section className="card">
         <h3>Currency</h3>
         <select
@@ -89,8 +95,9 @@ export default function SettingsPage() {
       <section className="card">
         <h3>Your data</h3>
         <p className="hint">
-          Everything is stored privately in this browser on this device. Export a backup regularly, and use it to move your budget
-          to another device.
+          {signedIn
+            ? 'Your budget is saved on this device and synced to your account. A backup file is still a good idea now and then.'
+            : 'Everything is stored privately in this browser on this device. Export a backup regularly, or sign in above to sync.'}
         </p>
         <div className="toolbar">
           <button className="btn primary" onClick={() => download(`tyler-finance-backup-${today()}.json`, JSON.stringify(data), 'application/json')}>
@@ -117,15 +124,22 @@ export default function SettingsPage() {
         <div className="toolbar">
           <button
             className="btn"
-            onClick={() => confirm('Replace your data with sample data?') && replace(demoData())}
+            onClick={() =>
+              confirm(signedIn ? 'Replace your budget with sample data? This also replaces it on your other devices.' : 'Replace your data with sample data?') &&
+              replace(demoData())
+            }
           >
             Load sample data
           </button>
           <button
             className="btn danger"
-            onClick={() => confirm('Delete ALL data in this browser? Export a backup first if you want to keep it.') && replace(null)}
+            onClick={() => {
+              if (signedIn) {
+                if (confirm('Remove the budget from this device and sign out? Your cloud copy and other devices are not affected.')) void signOut(true);
+              } else if (confirm('Delete ALL data in this browser? Export a backup first if you want to keep it.')) replace(null);
+            }}
           >
-            Delete everything
+            {signedIn ? 'Remove from this device' : 'Delete everything'}
           </button>
         </div>
       </section>
