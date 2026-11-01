@@ -22,3 +22,8 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - `src/lib/store.ts` — zustand store persisted to localStorage (key `tyler-finance`).
   New data fields need a default in `normalize()` so older saved budgets keep loading.
 - Money is integer cents; positive = inflow.
+
+## Phone layout rules
+
+- Text fields must be at least 16px on phones, or iOS Safari zooms in on tap and stays zoomed.
+- Nothing may be wider than the screen at 320px; check new screens and popups at 320/375/390px.
