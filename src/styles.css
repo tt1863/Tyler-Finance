@@ -476,6 +476,12 @@ textarea:focus {
   gap: 3px;
   min-width: 0;
 }
+.cat-name > .link-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
 .target-bar {
   display: block;
   height: 4px;
@@ -1197,6 +1203,12 @@ textarea:focus {
   }
   .brand {
     font-weight: 700;
+    flex: 1;
+  }
+  .topbar-settings {
+    text-decoration: none;
+    font-size: 1.25rem;
+    padding: 0.4rem 0.5rem;
   }
   .sidebar {
     position: fixed;

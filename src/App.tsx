@@ -74,6 +74,9 @@ export default function App() {
           ☰
         </button>
         <span className="brand">Tyler Finance</span>
+        <a href="#/settings" className="icon-btn topbar-settings" aria-label="Settings & Data" title="Settings & Data">
+          ⚙️
+        </a>
       </header>
       <Sidebar open={menuOpen} current={page} currentArg={arg} onClose={() => setMenuOpen(false)} />
       <main className="main">{content}</main>
