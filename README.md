@@ -28,6 +28,9 @@ them, and move money around when plans change.
 - **Reconcile** — match the cleared balance to your bank and lock it in.
 - **CSV import** from your bank, with duplicate detection.
 - **Reports** — spending by category/group, income vs spending, net worth.
+- **Sync across devices** (optional) — sign in with an emailed 6-digit code to
+  keep the budget in sync on phone, tablet and computer via Supabase. Works
+  offline; changes merge item by item. See "Cloud sync setup" below.
 - **Data** — saved in your browser; export/restore JSON backups, export CSV, undo
   (Ctrl/Cmd+Z), dark mode, and a phone-friendly layout.
 
@@ -46,6 +49,19 @@ npm run build    # static site in dist/
 push to `main`. One-time setup: in the repo go to **Settings → Pages** and set
 **Source** to **GitHub Actions**.
 
+## Cloud sync setup
+
+1. Create a Supabase project and run `supabase/schema.sql` in its SQL Editor.
+2. In Authentication → Emails → Magic Link, make the email include `{{ .Token }}`
+   (the app signs in with the 6-digit code, which also works in home-screen apps).
+3. Put the project URL and anon/publishable key in `.env`. Both are public by
+   design; row-level security limits each account to its own rows.
+
+Each budget item (account, category, transaction, assigned amount, …) is one row
+in `budget_records`. A device pushes the items that changed since its last sync,
+then pulls items other devices changed. The newest write to an item wins, and
+unsent local edits are never overwritten. Code: `src/lib/sync/`.
+
 ## How the budget math works
 
 All amounts are stored as integer cents. For each month and category:
@@ -60,5 +76,4 @@ The core logic lives in `src/lib/budget.ts` (calculations) and `src/lib/ops.ts`
 
 ## Not yet built
 
-Bank syncing,
-multi-device sync / login, and age-of-money.
+Bank syncing and age-of-money.

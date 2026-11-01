@@ -1,10 +1,14 @@
+import { useState } from 'react';
+import { SignInForm } from '../components/SyncPanel';
 import { demoData } from '../lib/demo';
+import { syncConfigured } from '../lib/sync/cloud';
 import { emptyData, starterData } from '../lib/ops';
 import { go } from '../lib/route';
 import { useStore } from '../lib/store';
 
 export default function Welcome() {
   const replace = useStore((s) => s.replace);
+  const [signingIn, setSigningIn] = useState(false);
   const start = (data: ReturnType<typeof emptyData>) => {
     replace(data);
     go('budget');
@@ -40,7 +44,22 @@ export default function Welcome() {
             Start completely blank
           </button>
         </div>
-        <p className="muted small">Your data stays in this browser. Nothing is sent anywhere.</p>
+        {syncConfigured &&
+          (signingIn ? (
+            <div className="card welcome-signin">
+              <h3>Sign in to get your budget</h3>
+              <SignInForm />
+            </div>
+          ) : (
+            <button className="btn big welcome-sync" onClick={() => setSigningIn(true)}>
+              ☁️ I already have a budget — sign in
+            </button>
+          ))}
+        <p className="muted small">
+          {syncConfigured
+            ? 'Your budget is saved on this device. Sign in any time to sync it across your devices.'
+            : 'Your data stays in this browser. Nothing is sent anywhere.'}
+        </p>
       </div>
     </div>
   );
