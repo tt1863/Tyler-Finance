@@ -2,6 +2,7 @@ import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
 import { uid } from './id';
 import type {
+  Split,
   Account,
   AccountType,
   BudgetData,
@@ -136,6 +137,8 @@ export interface TransactionDraft {
   cleared: Cleared;
   /** When set, this is a transfer to/from that account. */
   transferAccountId?: string;
+  /** Split across categories. Ignored for transfers. */
+  splits?: Split[];
 }
 
 /**
@@ -188,6 +191,10 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     };
     d.transactions.push(tx, pair);
   } else {
+    if (draft.splits && draft.splits.length > 1) {
+      tx.splits = draft.splits.map((s) => ({ ...s, memo: s.memo.trim() }));
+      tx.categoryId = null;
+    }
     d.transactions.push(tx);
     if (tx.payee && tx.categoryId && tx.categoryId !== READY_TO_ASSIGN) {
       d.payeeCategory[tx.payee] = tx.categoryId;
@@ -303,8 +310,10 @@ export function deleteCategory(data: BudgetData, id: string, reassignTo: string 
 }
 
 function removeCategoryRefs(d: BudgetData, id: string, reassignTo: string | null): BudgetData {
-  for (const t of d.transactions) if (t.categoryId === id) t.categoryId = reassignTo;
-  for (const s of d.scheduled) if (s.categoryId === id) s.categoryId = reassignTo;
+  for (const t of [...d.transactions, ...d.scheduled]) {
+    if (t.categoryId === id) t.categoryId = reassignTo;
+    for (const s of t.splits ?? []) if (s.categoryId === id) s.categoryId = reassignTo;
+  }
   for (const row of Object.values(d.assigned)) {
     if (row[id] !== undefined) {
       if (reassignTo && reassignTo !== READY_TO_ASSIGN) row[reassignTo] = (row[reassignTo] ?? 0) + row[id];
@@ -411,7 +420,9 @@ export function needsCategory(data: BudgetData): Transaction[] {
   const accounts = new Map(data.accounts.map((a) => [a.id, a]));
   return data.transactions.filter((t) => {
     const a = accounts.get(t.accountId);
-    if (!a?.onBudget || t.categoryId !== null) return false;
+    if (!a?.onBudget) return false;
+    if (t.splits?.length) return t.splits.some((s) => s.categoryId === null);
+    if (t.categoryId !== null) return false;
     if (t.transferAccountId) return accounts.get(t.transferAccountId)?.onBudget === false;
     // Starting debt on a credit card is intentionally uncategorized.
     if (a.type === 'credit' && t.payee === 'Starting Balance') return false;

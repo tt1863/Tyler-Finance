@@ -1,5 +1,5 @@
 import { currentMonth, monthDiff, monthOf, monthRange } from './dates';
-import type { BudgetData, Category, Cents, MonthKey, Target } from './types';
+import type { BudgetData, Category, Cents, MonthKey, Target, Transaction } from './types';
 import { READY_TO_ASSIGN } from './types';
 
 export interface CategoryMonth {
@@ -25,6 +25,11 @@ export interface MonthSummary {
   readyToAssign: Cents;
 }
 
+/** The category/amount pairs a transaction contributes: its splits, or itself. */
+export function categoryParts(t: Transaction): { categoryId: string | null; amount: Cents }[] {
+  return t.splits?.length ? t.splits : [{ categoryId: t.categoryId, amount: t.amount }];
+}
+
 const EMPTY: CategoryMonth = { carryIn: 0, assigned: 0, activity: 0, available: 0 };
 
 /**
@@ -48,8 +53,10 @@ export function computeActivity(data: BudgetData) {
     const account = accounts.get(t.accountId);
     if (!account?.onBudget) continue;
     const m = monthOf(t.date);
-    if (t.categoryId === READY_TO_ASSIGN) income[m] = (income[m] ?? 0) + t.amount;
-    else if (t.categoryId) add(m, t.categoryId, t.amount);
+    for (const part of categoryParts(t)) {
+      if (part.categoryId === READY_TO_ASSIGN) income[m] = (income[m] ?? 0) + part.amount;
+      else if (part.categoryId) add(m, part.categoryId, part.amount);
+    }
 
     const payCat = account.type === 'credit' ? paymentCategory.get(account.id) : undefined;
     if (payCat) {
@@ -57,7 +64,9 @@ export function computeActivity(data: BudgetData) {
         ? accounts.get(t.transferAccountId)?.onBudget === true
         : false;
       // Uncategorized, non-transfer entries (like starting debt) don't move money.
-      if (t.categoryId !== null || otherOnBudget) add(m, payCat, -t.amount);
+      for (const part of categoryParts(t)) {
+        if (part.categoryId !== null || otherOnBudget) add(m, payCat, -part.amount);
+      }
     }
   }
   return { activity, income };

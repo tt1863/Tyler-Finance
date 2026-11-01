@@ -81,6 +81,21 @@ export function demoData(): BudgetData {
     tx(m, 2, checking, 'Transfer', null, -25000, savings);
     tx(m, 25, checking, 'Transfer', null, -60000, visa);
     tx(m, 18, checking, 'Pharmacy', cat('Medical'), -2400);
+    if (!(m === now && 13 > todayDay)) {
+      d = saveTransaction(d, {
+        accountId: visa,
+        date: `${m}-13`,
+        payee: 'Target',
+        categoryId: null,
+        memo: '',
+        amount: -8650,
+        cleared: 'cleared',
+        splits: [
+          { categoryId: cat('Groceries'), amount: -5420, memo: 'Snacks & produce' },
+          { categoryId: cat('Shopping'), amount: -3230, memo: 'Towels' },
+        ],
+      });
+    }
   }
 
   d = updateCategory(d, cat('Groceries'), { target: { type: 'refill', amount: 60000 } });

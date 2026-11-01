@@ -52,6 +52,13 @@ export interface Category {
   ccAccountId?: string;
 }
 
+/** One part of a split transaction. Amounts of all parts add up to the transaction amount. */
+export interface Split {
+  categoryId: string | null;
+  amount: Cents;
+  memo: string;
+}
+
 export type Cleared = 'uncleared' | 'cleared' | 'reconciled';
 
 export interface Transaction {
@@ -67,6 +74,8 @@ export interface Transaction {
   /** For transfers: the other account and the id of the matching transaction. */
   transferAccountId?: string;
   transferTxId?: string;
+  /** When set, the amount is divided across categories (categoryId is null). */
+  splits?: Split[];
 }
 
 export type Frequency =
@@ -87,6 +96,7 @@ export interface Scheduled {
   memo: string;
   amount: Cents;
   transferAccountId?: string;
+  splits?: Split[];
   frequency: Frequency;
   /** First occurrence; later ones are computed from it so monthly dates don't drift. */
   startDate: DateStr;

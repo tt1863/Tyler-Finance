@@ -23,6 +23,8 @@ them, and move money around when plans change.
   weeks, monthly, every 3/6 months, yearly) with an optional end date. Due ones
   are entered automatically when you open the app; upcoming ones are listed in
   each account with Enter now / Skip. Future-dated transactions wait until their date.
+- **Split transactions** — divide one purchase across several categories (tap
+  "Split" next to Category), each part with its own memo.
 - **Reconcile** — match the cleared balance to your bank and lock it in.
 - **CSV import** from your bank, with duplicate detection.
 - **Reports** — spending by category/group, income vs spending, net worth.
@@ -58,5 +60,5 @@ The core logic lives in `src/lib/budget.ts` (calculations) and `src/lib/ops.ts`
 
 ## Not yet built
 
-Bank syncing, split transactions,
+Bank syncing,
 multi-device sync / login, and age-of-money.
