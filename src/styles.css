@@ -1181,6 +1181,12 @@ textarea:focus {
     left: 0;
     top: 0;
     bottom: 0;
+    /* Fill the visible screen only (100vh on iPhone reaches behind Safari's
+       toolbar and the home bar, hiding the bottom of the menu). */
+    height: auto;
+    max-height: 100dvh;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
     width: 280px;
     z-index: 45;
     transform: translateX(-100%);
@@ -1188,6 +1194,10 @@ textarea:focus {
   }
   .sidebar.open {
     transform: none;
+  }
+  /* Keep Settings right under the accounts instead of pinned to the bottom. */
+  .settings-link {
+    margin-top: 0.75rem;
   }
   .sidebar-backdrop {
     position: fixed;
