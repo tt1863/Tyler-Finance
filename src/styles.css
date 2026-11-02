@@ -365,6 +365,10 @@ textarea:focus {
   text-decoration: none;
   font-weight: 500;
 }
+.banner.info {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  color: var(--primary);
+}
 .banner.warn {
   background: var(--warn-bg);
   color: var(--warn);
@@ -680,6 +684,45 @@ textarea:focus {
 .btn.more {
   margin: 0.75rem auto;
   display: block;
+}
+
+/* Possible transfers */
+.transfer-box {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.transfer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.transfer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.transfer-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.transfer-actions {
+  display: flex;
+  gap: 0.4rem;
 }
 
 /* Scheduled transactions */
