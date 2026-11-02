@@ -146,6 +146,13 @@ export function planImport(input: PlanInput): PlanOutput {
     if (t.id.startsWith('bank-') && t.cleared !== 'reconciled') {
       changed.delete(t.id);
       deletes.add(t.id);
+      // If it was one side of a transfer, the other side becomes a normal
+      // transaction again instead of pointing at nothing.
+      const partner = t.transferTxId ? byId.get(t.transferTxId) : undefined;
+      if (partner && !deletes.has(partner.id)) {
+        const { transferAccountId: _a, transferTxId: _b, ...rest } = partner;
+        save({ ...rest, payee: rest.memo || rest.payee, categoryId: null });
+      }
     } else {
       // Entered by hand or reconciled: keep it, just unlink it from the bank.
       const { bankId: _unlinked, ...rest } = t;

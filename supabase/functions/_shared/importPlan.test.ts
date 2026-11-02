@@ -76,6 +76,16 @@ describe('user edits', () => {
   });
 });
 
+describe('transfers', () => {
+  it('when the bank removes one side of a linked transfer, the other side is unlinked', () => {
+    const out: AppTxn = { id: 'bank-t1', accountId: 'chk', date: '2026-10-05', payee: 'Transfer : Savings', categoryId: null, memo: 'ONLINE TRANSFER', amount: -500, cleared: 'uncleared', bankId: 't1', transferAccountId: 'sav', transferTxId: 'bank-t2' };
+    const into: AppTxn = { id: 'bank-t2', accountId: 'sav', date: '2026-10-05', payee: 'Transfer : Checking', categoryId: null, memo: 'FROM CHK', amount: 500, cleared: 'cleared', bankId: 't2', transferAccountId: 'chk', transferTxId: 'bank-t1' };
+    const r = plan({ existing: [out, into], removed: [{ transaction_id: 't1' }] });
+    expect(r.deletes).toEqual(['bank-t1']);
+    expect(r.upserts).toEqual([{ id: 'bank-t2', accountId: 'sav', date: '2026-10-05', payee: 'FROM CHK', categoryId: null, memo: 'FROM CHK', amount: 500, cleared: 'cleared', bankId: 't2' }]);
+  });
+});
+
 describe('balances', () => {
   it('debts are negative in the app', () => {
     expect(appBalance(250.5, 'credit')).toBe(-25050);
