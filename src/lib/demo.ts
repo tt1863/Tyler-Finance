@@ -108,6 +108,16 @@ export function demoData(): BudgetData {
   for (let i = 0; i < 3; i++) d = setAssigned(d, addMonths(start, i), visaPay, i === 0 ? 12000 : 15000);
   d = setAssigned(d, start, cat('Emergency Fund'), 525000);
 
+  // A move to savings that came in as two separate bank transactions, to show
+  // the "Possible transfers" suggestion.
+  const lastMonth = addMonths(now, -1);
+  for (const [account, amount, payee] of [
+    [checking, -20000, 'ONLINE TRANSFER TO SAV 4471'],
+    [savings, 20000, 'ONLINE TRANSFER FROM CHK 0932'],
+  ] as const) {
+    d = saveTransaction(d, { accountId: account, date: `${lastMonth}-20`, payee, categoryId: null, memo: '', amount, cleared: 'cleared' });
+  }
+
   // Recurring bills and income, starting from their next date.
   const next = (day: number) => {
     const thisMonth = `${now}-${String(day).padStart(2, '0')}`;

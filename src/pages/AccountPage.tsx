@@ -3,6 +3,7 @@ import AccountForm, { accountTypeLabel } from '../components/AccountForm';
 import { transactionCategoryLabel } from '../components/CategorySelect';
 import ImportModal from '../components/ImportModal';
 import ScheduledList from '../components/ScheduledList';
+import TransferSuggestions from '../components/TransferSuggestions';
 import Modal from '../components/Modal';
 import TransactionForm from '../components/TransactionForm';
 import { accountBalances } from '../lib/budget';
@@ -150,6 +151,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         <input className="search" type="search" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
+      <TransferSuggestions accountId={accountId} />
       <ScheduledList accountId={accountId} />
 
       <div className={`register ${isAll ? 'with-account' : ''}`}>

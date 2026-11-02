@@ -78,6 +78,8 @@ export interface Transaction {
   splits?: Split[];
   /** Bank (Plaid) transaction this came from or was matched to. */
   bankId?: string;
+  /** The person said this isn't one side of a transfer; don't suggest it again. */
+  notTransfer?: boolean;
 }
 
 export type Frequency =

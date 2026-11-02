@@ -148,9 +148,9 @@ export interface TransactionDraft {
 export function saveTransaction(data: BudgetData, draft: TransactionDraft): BudgetData {
   let d = structuredClone(data);
   const existing = draft.id ? d.transactions.find((t) => t.id === draft.id) : undefined;
-  const oldPairCleared = existing?.transferTxId
-    ? d.transactions.find((t) => t.id === existing.transferTxId)?.cleared
-    : undefined;
+  // Editing one side of a transfer rebuilds the other side; keep its own
+  // details (cleared state, bank link) rather than resetting them.
+  const oldPair = existing?.transferTxId ? d.transactions.find((t) => t.id === existing.transferTxId) : undefined;
   if (existing) d = removeTx(d, existing.id);
 
   const accounts = new Map(d.accounts.map((a) => [a.id, a]));
@@ -179,7 +179,9 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     tx.transferTxId = pairId;
     tx.payee = `Transfer : ${to?.name ?? ''}`;
     if (bothOnBudget || !from?.onBudget) tx.categoryId = null;
+    const { splits: _oldSplits, ...keep } = oldPair ?? ({} as Partial<Transaction>);
     const pair: Transaction = {
+      ...keep,
       id: pairId,
       accountId: draft.transferAccountId,
       date: draft.date,
@@ -187,7 +189,7 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
       categoryId: !bothOnBudget && to?.onBudget ? draft.categoryId : null,
       memo: tx.memo,
       amount: -draft.amount,
-      cleared: oldPairCleared ?? 'uncleared',
+      cleared: oldPair?.cleared ?? 'uncleared',
       transferAccountId: draft.accountId,
       transferTxId: id,
     };

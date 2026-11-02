@@ -9,6 +9,7 @@ import { fmt } from '../lib/money';
 import { addCategory, addGroup, assignLastMonth, assignUnderfunded, needsCategory, setAssigned } from '../lib/ops';
 import { go } from '../lib/route';
 import { upcoming } from '../lib/scheduled';
+import { findTransferPairs } from '../lib/transfers';
 import { useData, useStore } from '../lib/store';
 import type { Category, CategoryGroup } from '../lib/types';
 
@@ -23,6 +24,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   const [moving, setMoving] = useState<{ categoryId: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const uncategorized = useMemo(() => needsCategory(data).length, [data]);
+  const possibleTransfers = useMemo(() => findTransferPairs(data).length, [data]);
   // Scheduled transactions still to come in this month, by category.
   const upcomingByCat = useMemo(() => {
     const start = month === currentMonth() ? today() : `${month}-01`;
@@ -83,6 +85,11 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         </button>
       </div>
 
+      {possibleTransfers > 0 && (
+        <a className="banner info" href="#/accounts">
+          🔁 {possibleTransfers} possible transfer{possibleTransfers > 1 ? 's' : ''} to review →
+        </a>
+      )}
       {uncategorized > 0 && (
         <a className="banner warn" href="#/accounts/all">
           {uncategorized} transaction{uncategorized > 1 ? 's' : ''} need{uncategorized === 1 ? 's' : ''} a category →
