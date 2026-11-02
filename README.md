@@ -9,6 +9,9 @@ them, and move money around when plans change.
 - **Budget** — monthly view with Assigned / Activity / Available per category,
   a "Ready to Assign" total, category groups, hide/reorder, month-to-month
   rollover, and overspending that comes out of next month's Ready to Assign.
+- **Quick budget** — one tap to assign what targets need, last month's
+  assigned or spent, 3-month averages, reduce overfunding, or reset available to
+  $0; for one category (tap its name on a phone) or the whole month.
 - **Move money** — tap any Available amount to move money or cover overspending.
 - **Targets** — "assign each month", "refill up to", "have a balance by a date",
   and "have a balance of", with progress bars and one-click **Assign Underfunded**.
