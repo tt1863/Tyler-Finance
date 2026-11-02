@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { today } from '../lib/dates';
 import { fmt, parseMoney, toInput } from '../lib/money';
 import { deleteTransactions, saveTransaction } from '../lib/ops';
+import { saveRule, suggestMatch } from '../lib/review';
 import { deleteScheduled, FREQUENCIES, nextDate, processDue, saveScheduled } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
 import type { BudgetData, Frequency, Scheduled, Split, Transaction } from '../lib/types';
@@ -47,6 +48,10 @@ export default function TransactionForm({
   const [amount, setAmount] = useState(toInput(Math.abs(transaction?.amount ?? 0)));
   const [cleared, setCleared] = useState(transaction?.cleared ?? 'uncleared');
   const [error, setError] = useState('');
+  // "Always do this": turn the bank's wording into this payee/category next time.
+  const bankPayee = tx?.bankPayee;
+  const [makeRule, setMakeRule] = useState(false);
+  const [ruleMatch, setRuleMatch] = useState(bankPayee ? suggestMatch(bankPayee) : '');
   // Split parts as entered: amounts are in the same direction as the total
   // (a leading "-" means the opposite, e.g. a return inside a purchase).
   const sign = direction === 'out' ? -1 : 1;
@@ -135,6 +140,17 @@ export default function TransactionForm({
         splits: splitParts,
       }),
     );
+    if (makeRule && ruleMatch.trim() && !transferTarget) {
+      update(
+        (d) =>
+          saveRule(d, {
+            match: ruleMatch,
+            matchType: 'contains',
+            rename: payee.trim() || undefined,
+            categoryId: needsCategory && !splitParts ? categoryId : undefined,
+          }).data,
+      );
+    }
     if (addAnother) {
       setPayee('');
       setCategoryId(null);
@@ -318,6 +334,20 @@ export default function TransactionForm({
           Memo
           <input value={memo} onChange={(e) => setMemo(e.target.value)} />
         </label>
+        {bankPayee && !transferTarget && (
+          <div className="rule-box">
+            <p className="hint">
+              Bank says: <b>{bankPayee}</b>
+            </p>
+            <label className="checkbox">
+              <input type="checkbox" checked={makeRule} onChange={(e) => setMakeRule(e.target.checked)} />
+              <span>
+                <b>Always do this</b> — use this payee{needsCategory && !splits ? ' and category' : ''} for future bank transactions that contain:
+              </span>
+            </label>
+            {makeRule && <input aria-label="Bank text to match" value={ruleMatch} onChange={(e) => setRuleMatch(e.target.value)} />}
+          </div>
+        )}
         {!scheduled && <label className="checkbox">
           <input
             type="checkbox"

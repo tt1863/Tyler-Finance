@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
 import BankPanel from '../components/BankPanel';
+import RulesPanel from '../components/RulesPanel';
 import SyncPanel from '../components/SyncPanel';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
@@ -78,6 +79,7 @@ export default function SettingsPage() {
 
       <SyncPanel />
       <BankPanel />
+      <RulesPanel />
 
       <section className="card">
         <h3>Currency</h3>

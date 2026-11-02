@@ -3,6 +3,7 @@
 
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { appBalance, planImport, startingBalanceFix, type AccountLink, type AppTxn, type PlaidTxn } from './importPlan.ts';
+import type { PayeeRule } from './payeeRules.ts';
 import { plaid, PlaidError, type PlaidAccount } from './plaid.ts';
 
 export function adminClient(): SupabaseClient {
@@ -133,7 +134,9 @@ export async function syncItem(db: SupabaseClient, itemId: string): Promise<Sync
       if (!gone || gone.length < 1000) break;
     }
 
-    const plan = planImport({ added, modified, removed, links, existing, payeeCategory, deletedBankIds });
+    const rules = (await records(db, userId, 'rule')).map((r) => r.data as PayeeRule);
+
+    const plan = planImport({ added, modified, removed, links, existing, payeeCategory, deletedBankIds, rules });
 
     // New accounts: make the starting balance match the bank.
     const merged = new Map(existing.map((t) => [t.id, t]));

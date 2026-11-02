@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
 import { transactionCategoryLabel } from '../components/CategorySelect';
 import ImportModal from '../components/ImportModal';
+import ReviewList from '../components/ReviewList';
 import ScheduledList from '../components/ScheduledList';
 import TransferSuggestions from '../components/TransferSuggestions';
 import Modal from '../components/Modal';
@@ -151,6 +152,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         <input className="search" type="search" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
+      <ReviewList accountId={accountId} onOpen={setEditing} />
       <TransferSuggestions accountId={accountId} />
       <ScheduledList accountId={accountId} />
 
@@ -171,7 +173,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         {rows.slice(0, limit).map((t) => {
           const needs = uncategorizedIds.has(t.id);
           return (
-            <div key={t.id} className={`reg-row ${selected.has(t.id) ? 'selected' : ''}`} onClick={() => setEditing(t)}>
+            <div key={t.id} className={`reg-row ${selected.has(t.id) ? 'selected' : ''} ${t.approved === false ? 'unapproved' : ''}`} onClick={() => setEditing(t)}>
               <span onClick={(e) => e.stopPropagation()}>
                 <input type="checkbox" aria-label="Select" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} />
               </span>

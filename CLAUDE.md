@@ -29,6 +29,9 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - Linked banks (Plaid): `supabase/functions/bank` (app calls), `bank-webhook` (Plaid calls),
   `_shared/importPlan.ts` (pure import/matching logic, unit-tested), `supabase/bank.sql`.
   Imported transactions have `bankId`; edits must keep it (see `saveTransaction`).
+- Review + payee rules: imports carry `approved: false` and `bankPayee`; saving or linking
+  approves. Rule logic is shared app/server in `supabase/functions/_shared/payeeRules.ts`;
+  app actions in `src/lib/review.ts`. Rules sync as `rule` records.
 
 ## Phone layout rules
 

@@ -686,6 +686,96 @@ textarea:focus {
   display: block;
 }
 
+/* Review imported transactions */
+.review-box {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.9rem;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  gap: 0.4rem 1rem;
+  align-items: center;
+  padding: 0.55rem 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.review-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-decoration: none !important;
+}
+.review-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.review-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 0.4rem;
+  align-items: center;
+}
+.review-actions select {
+  min-height: 36px;
+  padding: 0.3rem 0.5rem;
+}
+.review-actions .approve {
+  min-height: 36px;
+  font-size: 1rem;
+}
+.review-cat {
+  padding-left: 0.2rem;
+}
+.review-box .more {
+  margin: 0.5rem auto;
+  display: block;
+}
+.reg-row.unapproved {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.reg-row.unapproved .payee {
+  font-weight: 600;
+}
+
+/* Payee rules */
+.rule-box {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+.rule-list li {
+  border-top: 1px solid var(--border);
+}
+.rule-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0.5rem 0;
+  min-width: 0;
+}
+
 /* Possible transfers */
 .transfer-box {
   background: var(--surface);
@@ -1440,6 +1530,9 @@ textarea:focus {
   }
   .reg-row.head {
     display: none;
+  }
+  .review-row {
+    grid-template-columns: 1fr;
   }
   .scheduled-head .small {
     display: none;

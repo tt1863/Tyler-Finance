@@ -78,6 +78,10 @@ export interface Transaction {
   splits?: Split[];
   /** Bank (Plaid) transaction this came from or was matched to. */
   bankId?: string;
+  /** The bank's own description, before payee rules. */
+  bankPayee?: string;
+  /** false = imported and waiting to be reviewed. Missing means approved. */
+  approved?: boolean;
   /** The person said this isn't one side of a transfer; don't suggest it again. */
   notTransfer?: boolean;
 }
@@ -121,7 +125,12 @@ export interface BudgetData {
   assigned: Record<MonthKey, Record<string, Cents>>;
   /** Payee name -> last category used, to auto-fill new transactions. */
   payeeCategory: Record<string, string>;
+  /** Rules that rename bank payees and pick categories. */
+  payeeRules: PayeeRule[];
   currency: string;
 }
+
+export type { PayeeRule } from '../../supabase/functions/_shared/payeeRules';
+import type { PayeeRule } from '../../supabase/functions/_shared/payeeRules';
 
 export const READY_TO_ASSIGN = 'rta';

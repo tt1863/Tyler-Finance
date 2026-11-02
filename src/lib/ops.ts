@@ -1,5 +1,6 @@
 import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
+import { applyRules } from '../../supabase/functions/_shared/payeeRules';
 import { uid } from './id';
 import type {
   Split,
@@ -26,13 +27,14 @@ export function emptyData(): BudgetData {
     scheduled: [],
     assigned: {},
     payeeCategory: {},
+    payeeRules: [],
     currency: 'USD',
   };
 }
 
 /** Fill in fields added after a budget was first saved. */
 export function normalize(data: BudgetData): BudgetData {
-  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [] };
+  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [], payeeRules: data.payeeRules ?? [] };
 }
 
 /** A starter set of categories similar to YNAB's defaults. */
@@ -166,7 +168,9 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     cleared: draft.cleared,
   };
   // Keep the link to the bank transaction so later bank updates find it.
+  // (Saving also counts as reviewing it, so it's no longer marked unapproved.)
   if (existing?.bankId) tx.bankId = existing.bankId;
+  if (existing?.bankPayee) tx.bankPayee = existing.bankPayee;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
     const from = accounts.get(draft.accountId);
@@ -379,7 +383,11 @@ export interface ImportRow {
   amount: Cents;
 }
 
-/** Import bank transactions, skipping likely duplicates and auto-filling categories by payee. */
+/**
+ * Import bank transactions from a CSV file, skipping likely duplicates. Payee
+ * rules and remembered categories fill in payees and categories, and the new
+ * transactions wait for review like linked-bank imports.
+ */
 export function importTransactions(
   data: BudgetData,
   accountId: string,
@@ -391,7 +399,8 @@ export function importTransactions(
   const seen = new Map<string, number>();
   for (const t of d.transactions) {
     if (t.accountId !== accountId) continue;
-    const k = key(t.date, t.amount, t.payee);
+    // Compare against the bank's original wording when a rule renamed it.
+    const k = key(t.date, t.amount, t.bankPayee ?? t.payee);
     seen.set(k, (seen.get(k) ?? 0) + 1);
   }
   let added = 0;
@@ -404,15 +413,18 @@ export function importTransactions(
       skipped++;
       continue;
     }
+    const { payee, categoryId } = applyRules(d.payeeRules, r.payee, d.payeeCategory);
     d.transactions.push({
       id: uid(),
       accountId,
       date: r.date,
-      payee: r.payee,
-      categoryId: d.payeeCategory[r.payee] ?? null,
+      payee,
+      categoryId,
       memo: r.memo,
       amount: r.amount,
       cleared: 'cleared',
+      bankPayee: r.payee,
+      approved: false,
     });
     added++;
   }
