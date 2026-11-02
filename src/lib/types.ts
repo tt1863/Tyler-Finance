@@ -76,6 +76,8 @@ export interface Transaction {
   transferTxId?: string;
   /** When set, the amount is divided across categories (categoryId is null). */
   splits?: Split[];
+  /** The person said this isn't one side of a transfer; don't suggest it again. */
+  notTransfer?: boolean;
 }
 
 export type Frequency =
