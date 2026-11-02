@@ -25,6 +25,9 @@ them, and move money around when plans change.
   each account with Enter now / Skip. Future-dated transactions wait until their date.
 - **Split transactions** — divide one purchase across several categories (tap
   "Split" next to Category), each part with its own memo.
+- **Debt payoff planner** — add each card's or loan's interest rate and minimum
+  payment, then see your debt-free date, total interest, and how an extra
+  monthly payment (avalanche or snowball) gets you there sooner.
 - **Reconcile** — match the cleared balance to your bank and lock it in.
 - **CSV import** from your bank, with duplicate detection.
 - **Reports** — spending by category/group, income vs spending, net worth.
