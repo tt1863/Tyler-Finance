@@ -31,6 +31,8 @@ them, and move money around when plans change.
 - **Sync across devices** (optional) — sign in with an emailed 6-digit code to
   keep the budget in sync on phone, tablet and computer via Supabase. Works
   offline; changes merge item by item. See "Cloud sync setup" below.
+- **Works offline** — the app saves itself on the device, opens instantly and
+  works without signal; a "new version is ready" bar offers updates.
 - **Data** — saved in your browser; export/restore JSON backups, export CSV, undo
   (Ctrl/Cmd+Z), dark mode, and a phone-friendly layout.
 
