@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { ChooseBudgetModal } from './components/SyncPanel';
 import { maybeAutoSync } from './lib/bank/api';
+import { pendingOAuth } from './lib/bank/plaidLink';
 import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
@@ -10,7 +11,7 @@ import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
 import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
-import { useRoute } from './lib/route';
+import { go, useRoute } from './lib/route';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
 
@@ -21,6 +22,12 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
+
+  // Coming back from a bank's own sign-in page (Chase and other OAuth banks):
+  // linking finishes on the Settings screen, so go there.
+  useEffect(() => {
+    if (pendingOAuth() && route[0] !== 'settings') go('settings');
+  }, []);
 
   useEffect(() => {
     void startSync();
