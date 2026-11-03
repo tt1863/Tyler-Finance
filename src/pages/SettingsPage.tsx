@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
+import AppearancePanel from '../components/AppearancePanel';
 import FlagsPanel from '../components/FlagsPanel';
 import SyncPanel from '../components/SyncPanel';
 import TemplatesPanel from '../components/TemplatesPanel';
@@ -69,6 +70,8 @@ export default function SettingsPage({ section }: { section?: string }) {
       <h1>Settings & Data</h1>
 
       <SyncPanel />
+
+      <AppearancePanel />
 
       <YnabImport autoOpen={section === 'ynab'} />
 
