@@ -548,6 +548,19 @@ textarea:focus {
   background: var(--warn-bg);
   color: var(--warn);
 }
+.overspent-box {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.overspent-box p {
+  margin: 0 0 0.5rem;
+}
+.credit-text {
+  color: var(--warn);
+}
 .pill.zero {
   background: var(--zero-bg);
   color: var(--text-2);

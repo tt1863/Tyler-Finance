@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { accountBalances, computeBudget } from './budget';
 import { currentMonth } from './dates';
-import { addAccount, addCategory, addGroup, deleteCategory, emptyData, needsCategory, saveTransaction } from './ops';
+import { addAccount, addCategory, addGroup, deleteCategory, emptyData, needsCategory, saveTransaction, setAssigned } from './ops';
 import { processDue, saveScheduled } from './scheduled';
 import { READY_TO_ASSIGN } from './types';
 
@@ -47,10 +47,15 @@ describe('split transactions', () => {
     expect(s.categories[g].activity).toBe(-2000);
   });
 
-  it('credit card splits move the full amount to the payment category', () => {
+  it('credit card splits move each funded part to the payment category', () => {
     let { d, g, h, visa, pay } = setup();
+    d = setAssigned(d, M, g, 3000);
+    d = setAssigned(d, M, h, 1000);
     d = split(d, visa, [[g, -3000], [h, -2000]]);
-    expect(computeBudget(d, M).get(M)!.categories[pay].activity).toBe(5000);
+    const s = computeBudget(d, M).get(M)!;
+    // Groceries is fully funded; Household only has $10 of its $20.
+    expect(s.categories[pay].activity).toBe(4000);
+    expect(s.categories[h]).toMatchObject({ available: -1000, creditOverspent: 1000 });
   });
 
   it('a split with an empty category needs attention', () => {
