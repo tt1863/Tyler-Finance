@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
-import { transactionCategoryLabel } from '../components/CategorySelect';
+import CategorySelect, { transactionCategoryLabel } from '../components/CategorySelect';
 import { FlagDot } from '../components/FlagPicker';
 import BulkBar from '../components/BulkBar';
 import ImportModal from '../components/ImportModal';
-import { flagMatches } from '../lib/flags';
+import { FLAG_COLORS, flagLabel } from '../lib/flags';
+import { EMPTY_FILTER, isFiltering, matches, totals, type TxFilter } from '../lib/search';
 import ScheduledList from '../components/ScheduledList';
 import TransferSuggestions from '../components/TransferSuggestions';
 import Modal from '../components/Modal';
@@ -22,7 +23,9 @@ export default function AccountPage({ accountId }: { accountId: string }) {
   const isAll = accountId === 'all';
   const account = data.accounts.find((a) => a.id === accountId);
   const balances = useMemo(() => accountBalances(data), [data]);
-  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<TxFilter>(EMPTY_FILTER);
+  const [showFilters, setShowFilters] = useState(false);
+  const setF = (patch: Partial<TxFilter>) => setFilter((f) => ({ ...f, ...patch }));
   const [onlyUncategorized, setOnlyUncategorized] = useState(false);
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
   const [editingAccount, setEditingAccount] = useState(false);
@@ -39,22 +42,15 @@ export default function AccountPage({ accountId }: { accountId: string }) {
   const uncategorizedIds = useMemo(() => new Set(uncategorized.map((t) => t.id)), [uncategorized]);
 
   const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const label = (t: Transaction) => transactionCategoryLabel(data, t);
     return data.transactions
       .filter((t) => isAll || t.accountId === accountId)
       .filter((t) => !onlyUncategorized || uncategorizedIds.has(t.id))
-      .filter(
-        (t) =>
-          !q ||
-          t.payee.toLowerCase().includes(q) ||
-          t.memo.toLowerCase().includes(q) ||
-          transactionCategoryLabel(data, t).toLowerCase().includes(q) ||
-          t.splits?.some((p) => p.memo.toLowerCase().includes(q)) ||
-          flagMatches(data, t.flag, q) ||
-          (t.amount / 100).toFixed(2).includes(q),
-      )
+      .filter((t) => matches(data, t, filter, label))
       .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
-  }, [data, accountId, isAll, search, onlyUncategorized, uncategorizedIds]);
+  }, [data, accountId, isAll, filter, onlyUncategorized, uncategorizedIds]);
+  const filtering = isFiltering(filter) || onlyUncategorized;
+  const activeFilters = [filter.categoryId, filter.flag, filter.from || filter.to || null, filter.min ?? filter.max, filter.cleared !== 'all' ? 1 : null].filter((x) => x !== null && x !== '').length;
 
   if (!isAll && !account) {
     return <p className="empty">Account not found.</p>;
@@ -140,8 +136,60 @@ export default function AccountPage({ accountId }: { accountId: string }) {
           <input type="checkbox" checked={onlyUncategorized} onChange={(e) => setOnlyUncategorized(e.target.checked)} />
           Needs category ({uncategorized.length})
         </label>
-        <input className="search" type="search" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="search" type="search" placeholder="Search…" value={filter.text} onChange={(e) => setF({ text: e.target.value })} />
+        <button className={`btn small ${activeFilters ? 'primary' : ''}`} onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters}>
+          Filters{activeFilters ? ` (${activeFilters})` : ''}
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <label className="wide">
+            Category
+            <CategorySelect data={data} value={filter.categoryId} onChange={(id) => setF({ categoryId: id })} includeRta includeNone="Any category" />
+          </label>
+          <label className="wide">
+            Flag
+            <select value={filter.flag ?? ''} onChange={(e) => setF({ flag: (e.target.value || null) as TxFilter['flag'] })}>
+              <option value="">Any or none</option>
+              <option value="any">Any flag</option>
+              {FLAG_COLORS.map((c) => (
+                <option key={c} value={c}>
+                  {flagLabel(data, c)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            From
+            <input type="date" value={filter.from} onChange={(e) => setF({ from: e.target.value })} />
+          </label>
+          <label>
+            To
+            <input type="date" value={filter.to} onChange={(e) => setF({ to: e.target.value })} />
+          </label>
+          <label>
+            Amount from
+            <input inputMode="decimal" placeholder="0.00" defaultValue="" onChange={(e) => setF({ min: e.target.value.trim() ? parseMoney(e.target.value) : null })} />
+          </label>
+          <label>
+            Amount to
+            <input inputMode="decimal" placeholder="Any" defaultValue="" onChange={(e) => setF({ max: e.target.value.trim() ? parseMoney(e.target.value) : null })} />
+          </label>
+          <label className="wide">
+            Status
+            <select value={filter.cleared} onChange={(e) => setF({ cleared: e.target.value as TxFilter['cleared'] })}>
+              <option value="all">Cleared and uncleared</option>
+              <option value="cleared">Cleared</option>
+              <option value="uncleared">Uncleared</option>
+            </select>
+          </label>
+          <button className="btn small" onClick={() => setFilter({ ...EMPTY_FILTER, text: filter.text })}>
+            Reset filters
+          </button>
+        </div>
+      )}
+      {filtering && <FilterTotals list={rows} />}
 
       <TransferSuggestions accountId={accountId} />
       <ScheduledList accountId={accountId} />
@@ -200,7 +248,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
             </div>
           );
         })}
-        {rows.length === 0 && <p className="empty">No transactions{search ? ' match your search' : ' yet'}.</p>}
+        {rows.length === 0 && <p className="empty">No transactions{filtering ? ' match' : ' yet'}.</p>}
         {rows.length > limit && (
           <button className="btn more" onClick={() => setLimit((l) => l + 200)}>
             Show more ({rows.length - limit} remaining)
@@ -277,5 +325,26 @@ function ReconcileModal({
         </form>
       )}
     </Modal>
+  );
+}
+
+/** Count and totals of the transactions a search or filter matched. */
+function FilterTotals({ list }: { list: Transaction[] }) {
+  const t = totals(list);
+  return (
+    <div className="filter-totals" role="status">
+      <span>
+        <b>{t.count}</b> matching
+      </span>
+      <span>
+        Out <b className="neg">{fmt(t.outflow)}</b>
+      </span>
+      <span>
+        In <b className="pos">{fmt(t.inflow)}</b>
+      </span>
+      <span>
+        Net <b className={t.net < 0 ? 'neg' : 'pos'}>{fmt(t.net)}</b>
+      </span>
+    </div>
   );
 }
