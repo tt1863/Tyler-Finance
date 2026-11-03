@@ -106,7 +106,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         </a>
       )}
       {uncategorized > 0 && (
-        <a className="banner warn" href="#/accounts/all">
+        <a className="banner warn" href="#/accounts/all/review">
           {uncategorized} transaction{uncategorized > 1 ? 's' : ''} need{uncategorized === 1 ? 's' : ''} a category →
         </a>
       )}

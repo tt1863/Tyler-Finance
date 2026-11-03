@@ -80,7 +80,7 @@ export default function App() {
 
   const [page = 'budget', arg] = route;
   let content;
-  if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} key={arg ?? 'all'} />;
+  if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} mode={route[2]} key={route.slice(1).join('/')} />;
   else if (page === 'reports') content = <ReportsPage key={arg ?? ''} initialTab={arg} />;
   else if (page === 'debt') content = <DebtPage />;
   else if (page === 'payees') content = <PayeesPage />;

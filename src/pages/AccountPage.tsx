@@ -17,7 +17,12 @@ import { needsCategory, reconcile, setCleared } from '../lib/ops';
 import { useData, useStore } from '../lib/store';
 import type { Transaction } from '../lib/types';
 
-export default function AccountPage({ accountId }: { accountId: string }) {
+/**
+ * `mode` comes from the URL (#/accounts/<id>/<mode>), used by home-screen
+ * shortcuts: "new" opens the add-transaction form, "review" shows only
+ * transactions that need a category.
+ */
+export default function AccountPage({ accountId, mode }: { accountId: string; mode?: string }) {
   const data = useData();
   const update = useStore((s) => s.update);
   const isAll = accountId === 'all';
@@ -26,8 +31,8 @@ export default function AccountPage({ accountId }: { accountId: string }) {
   const [filter, setFilter] = useState<TxFilter>(EMPTY_FILTER);
   const [showFilters, setShowFilters] = useState(false);
   const setF = (patch: Partial<TxFilter>) => setFilter((f) => ({ ...f, ...patch }));
-  const [onlyUncategorized, setOnlyUncategorized] = useState(false);
-  const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
+  const [onlyUncategorized, setOnlyUncategorized] = useState(mode === 'review');
+  const [editing, setEditing] = useState<Transaction | 'new' | null>(mode === 'new' && data.accounts.length ? 'new' : null);
   const [editingAccount, setEditingAccount] = useState(false);
   const [importing, setImporting] = useState(false);
   const [reconciling, setReconciling] = useState(false);
@@ -261,7 +266,11 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         <TransactionForm
           transaction={editing === 'new' ? undefined : editing}
           defaultAccountId={isAll ? undefined : accountId}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            // Opened from a shortcut: drop "/new" so going back or reloading doesn't reopen the form.
+            if (mode === 'new') history.replaceState(null, '', `#/accounts/${accountId}`);
+          }}
         />
       )}
       {editingAccount && account && <AccountForm account={account} onClose={() => setEditingAccount(false)} />}

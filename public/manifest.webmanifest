@@ -27,5 +27,46 @@
       "sizes": "any",
       "type": "image/svg+xml"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add transaction",
+      "short_name": "Add",
+      "description": "Enter a new transaction",
+      "url": "./#/accounts/all/new",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "To review",
+      "short_name": "Review",
+      "description": "Transactions that need a category",
+      "url": "./#/accounts/all/review",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Budget",
+      "short_name": "Budget",
+      "description": "This month's budget",
+      "url": "./#/budget",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }
