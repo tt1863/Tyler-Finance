@@ -120,7 +120,20 @@ export function GroupedBarChart({
 }
 
 /** Single-series line chart with a crosshair tooltip. Handles negative values. */
-export function LineChart({ labels, values, name, color }: { labels: string[]; values: number[]; name: string; color: string }) {
+export function LineChart({
+  labels,
+  values,
+  name,
+  color,
+  format = fmt,
+}: {
+  labels: string[];
+  values: number[];
+  name: string;
+  color: string;
+  /** Tooltip value format (default: money). */
+  format?: (v: number) => string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const upper = ticksFor(Math.max(0, ...values));
   const lower = Math.min(0, ...values) < 0 ? ticksFor(-Math.min(...values)).map((t) => -t) : [0];
@@ -177,7 +190,7 @@ export function LineChart({ labels, values, name, color }: { labels: string[]; v
           <Tooltip x={(x(hover) / W) * 100} title={labels[hover]}>
             <div className="tt-row">
               <span>{name}</span>
-              <b>{fmt(values[hover])}</b>
+              <b>{format(values[hover])}</b>
             </div>
           </Tooltip>
         )}

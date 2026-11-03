@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import CategoryModal from '../components/CategoryModal';
+import { ageOfMoney, agedOutflows } from '../lib/ageOfMoney';
 import GroupModal from '../components/GroupModal';
 import MoneyInput from '../components/MoneyInput';
 import Modal from '../components/Modal';
@@ -46,6 +47,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   }, [data, month]);
 
   const rta = summary.readyToAssign;
+  const age = useMemo(() => ageOfMoney(agedOutflows(data)), [data]);
   const totalUnderfunded = data.categories
     .filter((c) => !c.hidden)
     .reduce((s, c) => s + underfundedAmount(c, categoryMonth(summary, c.id), month, data), 0);
@@ -91,6 +93,11 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
             {rta > 0 ? 'Ready to Assign' : rta < 0 ? 'Assigned more than you have' : 'All money assigned'}
           </span>
         </button>
+        {age !== null && (
+          <a className="aom" href="#/reports/age" title="Age of Money">
+            Age of Money <b>{age} day{age === 1 ? '' : 's'}</b>
+          </a>
+        )}
       </div>
 
       {possibleTransfers > 0 && (

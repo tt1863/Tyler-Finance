@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { GroupedBarChart, LineChart } from '../components/Charts';
+import { OUTFLOWS_NEEDED, ageOfMoney, agedOutflows } from '../lib/ageOfMoney';
 import { accountBalances, computeActivity, netWorthByMonth } from '../lib/budget';
 import { addMonths, currentMonth, dateLabel, monthLabel, monthOf, monthRange } from '../lib/dates';
 import { fmt } from '../lib/money';
@@ -18,7 +19,13 @@ const RANGES = [
 const BLUE = 'var(--series-1)';
 const ORANGE = 'var(--series-2)';
 
-type Tab = 'spending' | 'trends' | 'income' | 'networth';
+type Tab = 'spending' | 'trends' | 'income' | 'networth' | 'age';
+const TABS: Tab[] = ['spending', 'trends', 'income', 'networth', 'age'];
+const AGE_RANGES = [
+  { months: 6, label: '6 months' },
+  { months: 12, label: '1 year' },
+  { months: 24, label: '2 years' },
+];
 
 const TREND_RANGES = [3, 6, 12];
 
@@ -30,9 +37,10 @@ function parseScope(v: string): ReportScope {
   return kind === 'group' || kind === 'category' ? { kind, id } : { kind: 'all' };
 }
 
-export default function ReportsPage() {
+export default function ReportsPage({ initialTab }: { initialTab?: string }) {
   const data = useData();
-  const [tab, setTab] = useState<Tab>('spending');
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'spending');
+  const [ageRange, setAgeRange] = useState(12);
   const [range, setRange] = useState(2);
   const [byGroup, setByGroup] = useState(false);
   const [trendRange, setTrendRange] = useState(6);
@@ -90,6 +98,16 @@ export default function ReportsPage() {
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? 'Deleted category';
   const budgetGroups = data.groups.filter((g) => !g.system && data.categories.some((c) => c.groupId === g.id && !c.ccAccountId));
 
+  const outflows = useMemo(() => agedOutflows(data), [data]);
+  const ageNow = ageOfMoney(outflows);
+  const ageHistory = useMemo(() => {
+    const ms = monthRange(addMonths(to, -(ageRange - 1)), to);
+    // Each month's value is the Age of Money on its last day (today for this month).
+    return ms
+      .map((m) => ({ month: m, value: ageOfMoney(outflows, `${m}-31`) }))
+      .filter((x): x is { month: string; value: number } => x.value !== null);
+  }, [outflows, ageRange, to]);
+
   const netWorth = useMemo(() => netWorthByMonth(data, chartFrom, to), [data, chartFrom, to]);
   const balances = useMemo(() => accountBalances(data), [data]);
   let assets = 0;
@@ -111,6 +129,7 @@ export default function ReportsPage() {
               ['trends', 'Trends'],
               ['income', 'Income'],
               ['networth', 'Net Worth'],
+              ['age', 'Age of Money'],
             ] as const
           ).map(([v, l]) => (
             <button key={v} className={tab === v ? 'active' : ''} onClick={() => setTab(v)}>
@@ -258,6 +277,42 @@ export default function ReportsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === 'age' && (
+        <div className="card">
+          <div className="toolbar tight">
+            <select value={ageRange} onChange={(e) => setAgeRange(Number(e.target.value))} aria-label="Range">
+              {AGE_RANGES.map((r) => (
+                <option key={r.months} value={r.months}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="hero">
+            <span className="label">Age of Money</span>
+            <span className="hero-number">{ageNow === null ? '—' : `${ageNow} day${ageNow === 1 ? '' : 's'}`}</span>
+            <span className="muted small">
+              {ageNow === null
+                ? `Shows after ${OUTFLOWS_NEEDED} cash outflows covered by income (${outflows.length} so far).`
+                : `On average, money you spent recently arrived ${ageNow} days earlier. Higher is better: it means you're spending last month's income, not this week's.`}
+            </span>
+          </div>
+          {ageHistory.length > 1 && (
+            <LineChart
+              name="Age of Money (days)"
+              color={BLUE}
+              labels={ageHistory.map((x) => monthLabel(x.month, true))}
+              values={ageHistory.map((x) => x.value * 100)}
+              format={(v) => `${Math.round(v / 100)} days`}
+            />
+          )}
+          <p className="hint">
+            Based on the last {OUTFLOWS_NEEDED} cash outflows, first in, first out. Transfers between your cash accounts and
+            starting balances aren't counted; credit card spending counts when you pay the card.
+          </p>
         </div>
       )}
 
