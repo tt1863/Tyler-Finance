@@ -78,7 +78,7 @@ export default function App() {
   else if (page === 'reports') content = <ReportsPage />;
   else if (page === 'debt') content = <DebtPage />;
   else if (page === 'payees') content = <PayeesPage />;
-  else if (page === 'settings') content = <SettingsPage />;
+  else if (page === 'settings') content = <SettingsPage section={arg} />;
   else content = <BudgetPage month={arg} />;
 
   return (

@@ -43,6 +43,15 @@ export default function Welcome() {
           <button className="link-btn small" onClick={() => start(emptyData())}>
             Start completely blank
           </button>
+          <button
+            className="link-btn small"
+            onClick={() => {
+              replace(emptyData());
+              go('settings/ynab');
+            }}
+          >
+            Coming from YNAB? Import your YNAB export
+          </button>
         </div>
         {syncConfigured &&
           (signingIn ? (
