@@ -505,8 +505,17 @@ textarea:focus {
   background: var(--warn);
   border-radius: 2px;
 }
+.target-fill.snoozed {
+  background: var(--muted);
+}
 .target-fill.done {
   background: var(--good);
+}
+.toolbar.tight {
+  margin: 0.25rem 0 0;
+}
+.target-note.muted {
+  color: var(--muted);
 }
 .target-note {
   font-size: 0.75rem;

@@ -206,6 +206,8 @@ export interface TargetStatus {
   /** 0..1 progress for this month. */
   progress: number;
   description: string;
+  /** Snoozed for this month. */
+  snoozed?: boolean;
 }
 
 /** Sum of a category's assigned amounts from `from` up to (not including) `to`. */
@@ -318,6 +320,9 @@ export function targetStatus(
       : needed > 0
         ? Math.min(1, Math.max(0, cm.assigned) / needed)
         : 1;
+  // A snoozed target asks for nothing for the month it was snoozed in (its
+  // progress still shows where it stands).
+  if (target.snoozed === month) return { needed: 0, underfunded: 0, progress, description, snoozed: true };
   return { needed, underfunded, progress, description };
 }
 

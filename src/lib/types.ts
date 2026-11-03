@@ -61,6 +61,8 @@ export interface Target {
   repeat?: 'none' | 'monthly' | 'yearly';
   /** Month the target was set up (for one-time "set aside" targets). */
   start?: MonthKey;
+  /** Snoozed for this month only: it asks for nothing until the next month. */
+  snoozed?: MonthKey;
 }
 
 export interface Category {
