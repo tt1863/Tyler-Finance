@@ -24,6 +24,20 @@ export interface Account {
   note?: string;
   /** For credit cards and loans: used by the debt payoff planner. */
   debt?: { apr: number; minPayment: Cents };
+  /** A line of credit: budgets exactly like a credit card (type 'credit'). */
+  creditLine?: boolean;
+  /** Loan details (loan accounts made with the loan form). */
+  loan?: LoanInfo;
+}
+
+export type LoanKind = 'mortgage' | 'auto' | 'student' | 'personal' | 'medical' | 'other';
+
+export interface LoanInfo {
+  kind: LoanKind;
+  /** Monthly escrow (taxes, insurance) paid with a mortgage; not part of the loan balance. */
+  escrow?: Cents;
+  /** Interest has been recorded through the end of this month. */
+  interestThrough: MonthKey;
 }
 
 export interface CategoryGroup {
@@ -34,13 +48,35 @@ export interface CategoryGroup {
   system?: boolean;
 }
 
-export type TargetType = 'monthly' | 'refill' | 'byDate' | 'balance';
+/**
+ * Target types (YNAB's names in quotes):
+ * - weekly / monthly / yearly: "Set aside another…" (behavior 'setAside') or
+ *   "Refill up to…" (behavior 'refill') each week, month or year.
+ * - refill: older saved form of monthly + refill.
+ * - custom: an amount due on a date ("Due on"), repeating monthly, yearly or not.
+ * - byDate: "Have a balance of…" by a month. balance: "Have a balance of…".
+ */
+export type TargetType = 'weekly' | 'monthly' | 'refill' | 'yearly' | 'custom' | 'byDate' | 'balance';
+
+export type TargetBehavior = 'setAside' | 'refill';
 
 export interface Target {
   type: TargetType;
   amount: Cents;
   /** Month the target is due (byDate only). */
   month?: MonthKey;
+  /** weekly / yearly / custom: set aside another, or refill (fill) up to. Default setAside. */
+  behavior?: TargetBehavior;
+  /** weekly: day of the week the week starts over (0 = Sunday). */
+  weekday?: number;
+  /** yearly: "MM-DD" each year; custom: "YYYY-MM-DD" (the first due date when repeating). */
+  due?: string;
+  /** custom only. */
+  repeat?: 'none' | 'monthly' | 'yearly';
+  /** Month the target was set up (for one-time "set aside" targets). */
+  start?: MonthKey;
+  /** Snoozed for this month only: it asks for nothing until the next month. */
+  snoozed?: MonthKey;
 }
 
 export interface Category {
@@ -52,6 +88,8 @@ export interface Category {
   target?: Target;
   /** Set on credit-card payment categories: the card this category pays. */
   ccAccountId?: string;
+  /** Set on a loan's payment category: the loan it pays. */
+  loanAccountId?: string;
 }
 
 /** One part of a split transaction. Amounts of all parts add up to the transaction amount. */
@@ -82,7 +120,14 @@ export interface Transaction {
   bankId?: string;
   /** The person said this isn't one side of a transfer; don't suggest it again. */
   notTransfer?: boolean;
+  /** Optional colored flag for grouping across categories. */
+  flag?: FlagColor;
+  /** Bank's id for this transaction (OFX FITID), used to skip re-imports. */
+  importId?: string;
 }
+
+export const FLAG_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
+export type FlagColor = (typeof FLAG_COLORS)[number];
 
 export type Frequency =
   | 'once'
@@ -124,6 +169,8 @@ export interface BudgetData {
   /** Payee name -> last category used, to auto-fill new transactions. */
   payeeCategory: Record<string, string>;
   currency: string;
+  /** Optional names for flag colors, e.g. { blue: 'Reimbursable' }. */
+  flagNames: Partial<Record<FlagColor, string>>;
 }
 
 export const READY_TO_ASSIGN = 'rta';

@@ -15,6 +15,8 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - Server functions (`supabase/functions/`) deploy via `.github/workflows/functions.yml`
   on pushes to `main` and `claude/**` (needs the `SUPABASE_ACCESS_TOKEN` repo secret).
   Database changes are SQL files in `supabase/` that the owner runs in the SQL Editor.
+- The backlog is GitHub issues (labels: wave, priority, effort). Work from an issue and put
+  "Closes #N" in the pull request so merging closes it.
 - Merge only when the owner says the feature is ready to ship.
 - Before pushing: `npm run typecheck`, `npm test`, `npm run build`, and check the UI
   at phone width (the owner mainly uses the app on a phone).
@@ -29,6 +31,10 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - Linked banks (Plaid): `supabase/functions/bank` (app calls), `bank-webhook` (Plaid calls),
   `_shared/importPlan.ts` (pure import/matching logic, unit-tested), `supabase/bank.sql`.
   Imported transactions have `bankId`; edits must keep it (see `saveTransaction`).
+- Credit cards follow YNAB: card spending moves only the funded part of a purchase to the
+  card's payment category (`computeBudget` walks each month's transactions in date order);
+  the rest is `creditOverspent` (yellow), which resets at month end without reducing
+  Ready to Assign. Cash overspending (red) comes out of next month.
 
 - Offline: `build/serviceWorker.ts` (Vite plugin) writes `dist/sw.js`, which saves every file
   of the build (cache per scope + build hash); `src/lib/updates.ts` registers it and shows the

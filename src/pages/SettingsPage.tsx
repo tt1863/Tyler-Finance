@@ -1,9 +1,13 @@
 import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
 import BankPanel from '../components/BankPanel';
+import FlagsPanel from '../components/FlagsPanel';
 import SyncPanel from '../components/SyncPanel';
+import TemplatesPanel from '../components/TemplatesPanel';
+import YnabImport from '../components/YnabImport';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
+import { csvCell, download } from '../lib/download';
 import { demoData } from '../lib/demo';
 import { setCurrency } from '../lib/money';
 import { useData, useStore } from '../lib/store';
@@ -11,18 +15,7 @@ import type { BudgetData } from '../lib/types';
 
 const CURRENCIES = ['USD', 'CAD', 'EUR', 'GBP', 'AUD', 'NZD', 'JPY', 'MXN', 'INR', 'CHF', 'SEK'];
 
-function download(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-
-export default function SettingsPage() {
+export default function SettingsPage({ section }: { section?: string }) {
   const data = useData();
   const update = useStore((s) => s.update);
   const replace = useStore((s) => s.replace);
@@ -78,6 +71,40 @@ export default function SettingsPage() {
 
       <SyncPanel />
       <BankPanel />
+
+      <YnabImport autoOpen={section === 'ynab'} />
+
+      <section className="card">
+        <h3>Payees</h3>
+        <p className="hint">Rename or merge payees, and choose the category filled in for each.</p>
+        <a className="btn" href="#/payees">
+          Manage payees
+        </a>
+      </section>
+
+      <TemplatesPanel />
+
+      <section className="card">
+        <h3>Home-screen shortcuts</h3>
+        <p className="hint">
+          <b>Android:</b> after adding the app to your home screen, press and hold its icon for <i>Add transaction</i>,{' '}
+          <i>To review</i> and <i>Budget</i>.
+        </p>
+        <p className="hint">
+          <b>iPhone / iPad:</b> iOS doesn't offer press-and-hold actions or widgets for web apps. These links open the
+          same screens directly.
+        </p>
+        <div className="export-row">
+          <a className="btn small" href="#/accounts/all/new">
+            Add transaction
+          </a>
+          <a className="btn small" href="#/accounts/all/review">
+            To review
+          </a>
+        </div>
+      </section>
+
+      <FlagsPanel />
 
       <section className="card">
         <h3>Currency</h3>

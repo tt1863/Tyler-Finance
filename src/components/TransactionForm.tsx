@@ -4,9 +4,10 @@ import { fmt, parseMoney, toInput } from '../lib/money';
 import { deleteTransactions, saveTransaction } from '../lib/ops';
 import { deleteScheduled, FREQUENCIES, nextDate, processDue, saveScheduled } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
-import type { BudgetData, Frequency, Scheduled, Split, Transaction } from '../lib/types';
+import type { BudgetData, FlagColor, Frequency, Scheduled, Split, Transaction } from '../lib/types';
 import { READY_TO_ASSIGN } from '../lib/types';
 import CategorySelect from './CategorySelect';
+import FlagPicker from './FlagPicker';
 import Modal from './Modal';
 
 const TRANSFER_PREFIX = 'Transfer : ';
@@ -47,6 +48,7 @@ export default function TransactionForm({
   const [amount, setAmount] = useState(toInput(Math.abs(transaction?.amount ?? 0)));
   const [cleared, setCleared] = useState(transaction?.cleared ?? 'uncleared');
   const [error, setError] = useState('');
+  const [flag, setFlagValue] = useState<FlagColor | null>(tx?.flag ?? null);
   // Split parts as entered: amounts are in the same direction as the total
   // (a leading "-" means the opposite, e.g. a return inside a purchase).
   const sign = direction === 'out' ? -1 : 1;
@@ -78,6 +80,12 @@ export default function TransactionForm({
     setPayee(value);
     const remembered = data.payeeCategory[value];
     if (remembered && !categoryId) setCategoryId(remembered);
+    // Paying a loan: use its payment category.
+    if (value.startsWith(TRANSFER_PREFIX) && !categoryId) {
+      const target = data.accounts.find((a) => a.name === value.slice(TRANSFER_PREFIX.length).trim());
+      const loanCat = target && data.categories.find((c) => c.loanAccountId === target.id);
+      if (loanCat) setCategoryId(loanCat.id);
+    }
   };
 
   const save = (addAnother = false) => {
@@ -133,6 +141,7 @@ export default function TransactionForm({
         cleared,
         transferAccountId: transferTarget?.id,
         splits: splitParts,
+        flag: flag ?? undefined,
       }),
     );
     if (addAnother) {
@@ -318,6 +327,12 @@ export default function TransactionForm({
           Memo
           <input value={memo} onChange={(e) => setMemo(e.target.value)} />
         </label>
+        {!scheduled && (
+          <div className="field">
+            <span className="field-label">Flag</span>
+            <FlagPicker data={data} value={flag} onChange={setFlagValue} />
+          </div>
+        )}
         {!scheduled && <label className="checkbox">
           <input
             type="checkbox"
