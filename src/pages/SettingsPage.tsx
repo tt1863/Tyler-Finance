@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
 import FlagsPanel from '../components/FlagsPanel';
 import SyncPanel from '../components/SyncPanel';
+import TemplatesPanel from '../components/TemplatesPanel';
 import YnabImport from '../components/YnabImport';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
@@ -78,6 +79,8 @@ export default function SettingsPage({ section }: { section?: string }) {
           Manage payees
         </a>
       </section>
+
+      <TemplatesPanel />
 
       <FlagsPanel />
 
