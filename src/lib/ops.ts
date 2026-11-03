@@ -169,6 +169,7 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     cleared: draft.cleared,
     ...(draft.flag ? { flag: draft.flag } : {}),
   };
+  if (existing?.importId) tx.importId = existing.importId;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
     const from = accounts.get(draft.accountId);
@@ -390,6 +391,8 @@ export interface ImportRow {
   payee: string;
   memo: string;
   amount: Cents;
+  /** The bank's own ID for the transaction (OFX/QFX FITID), when the file has one. */
+  importId?: string;
 }
 
 /** Import bank transactions, skipping likely duplicates and auto-filling categories by payee. */
@@ -407,9 +410,16 @@ export function importTransactions(
     const k = key(t.date, t.amount, t.payee);
     seen.set(k, (seen.get(k) ?? 0) + 1);
   }
+  const seenIds = new Set(
+    d.transactions.filter((t) => t.accountId === accountId && t.importId).map((t) => t.importId!),
+  );
   let added = 0;
   let skipped = 0;
   for (const r of rows) {
+    if (r.importId && seenIds.has(r.importId)) {
+      skipped++;
+      continue;
+    }
     const k = key(r.date, r.amount, r.payee);
     const count = seen.get(k) ?? 0;
     if (count > 0) {
@@ -426,7 +436,9 @@ export function importTransactions(
       memo: r.memo,
       amount: r.amount,
       cleared: 'cleared',
+      ...(r.importId ? { importId: r.importId } : {}),
     });
+    if (r.importId) seenIds.add(r.importId);
     added++;
   }
   return { data: d, added, skipped };
