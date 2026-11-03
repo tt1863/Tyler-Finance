@@ -82,6 +82,26 @@ export default function SettingsPage({ section }: { section?: string }) {
 
       <TemplatesPanel />
 
+      <section className="card">
+        <h3>Home-screen shortcuts</h3>
+        <p className="hint">
+          <b>Android:</b> after adding the app to your home screen, press and hold its icon for <i>Add transaction</i>,{' '}
+          <i>To review</i> and <i>Budget</i>.
+        </p>
+        <p className="hint">
+          <b>iPhone / iPad:</b> iOS doesn't offer press-and-hold actions or widgets for web apps. These links open the
+          same screens directly.
+        </p>
+        <div className="export-row">
+          <a className="btn small" href="#/accounts/all/new">
+            Add transaction
+          </a>
+          <a className="btn small" href="#/accounts/all/review">
+            To review
+          </a>
+        </div>
+      </section>
+
       <FlagsPanel />
 
       <section className="card">
