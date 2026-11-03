@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
 import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
+import { applyUpdate, useUpdate } from './lib/updates';
 import { useRoute } from './lib/route';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
@@ -18,6 +19,7 @@ export default function App() {
   const undo = useStore((s) => s.undo);
   const route = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
+  const updateReady = useUpdate((s) => s.ready);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
 
@@ -89,6 +91,14 @@ export default function App() {
       </header>
       <Sidebar open={menuOpen} current={page} currentArg={arg} onClose={() => setMenuOpen(false)} />
       <main className="main">{content}</main>
+      {updateReady && (
+        <div className="update-bar" role="status">
+          <span>A new version is ready.</span>
+          <button className="btn primary small" onClick={applyUpdate}>
+            Update
+          </button>
+        </div>
+      )}
       <ChooseBudgetModal />
     </div>
   );
