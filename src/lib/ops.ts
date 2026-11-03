@@ -112,6 +112,9 @@ export function updateAccount(data: BudgetData, id: string, patch: Partial<Accou
   const payCat = d.categories.find((c) => c.ccAccountId === id);
   if (payCat && patch.name) payCat.name = patch.name;
   if (payCat && patch.closed !== undefined) payCat.hidden = patch.closed;
+  const loanCat = d.categories.find((c) => c.loanAccountId === id);
+  if (loanCat && patch.name) loanCat.name = `${patch.name} Payment`;
+  if (loanCat && patch.closed !== undefined) loanCat.hidden = patch.closed;
   return d;
 }
 
@@ -125,6 +128,8 @@ export function deleteAccount(data: BudgetData, id: string): BudgetData {
   d.scheduled = d.scheduled.filter((s) => s.accountId !== id && s.transferAccountId !== id);
   const payCat = d.categories.find((c) => c.ccAccountId === id);
   if (payCat) d = removeCategoryRefs(d, payCat.id, null);
+  // A loan's payment category stays (it may hold money), just unlinked.
+  for (const c of d.categories) if (c.loanAccountId === id) delete c.loanAccountId;
   return d;
 }
 

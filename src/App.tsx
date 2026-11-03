@@ -13,6 +13,7 @@ import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
 import { applyUpdate, useUpdate } from './lib/updates';
 import { useRoute } from './lib/route';
+import { postLoanInterest } from './lib/loans';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
 
@@ -36,6 +37,11 @@ export default function App() {
       const current = useStore.getState().data;
       if (current && processDue(current, today()).entered > 0) {
         useStore.getState().update((d) => processDue(d, today()).data);
+      }
+      // Record last month's loan interest once the month is over.
+      const latest = useStore.getState().data;
+      if (latest && postLoanInterest(latest, today()).data !== latest) {
+        useStore.getState().update((d) => postLoanInterest(d, today()).data);
       }
     };
     run();

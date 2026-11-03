@@ -3,6 +3,7 @@ import { LineChart } from '../components/Charts';
 import MoneyInput from '../components/MoneyInput';
 import { accountBalances } from '../lib/budget';
 import { addMonths, currentMonth, monthLabel } from '../lib/dates';
+import { updateLoan } from '../lib/loans';
 import { monthlyInterest, planPayoff, type DebtInput, type Strategy } from '../lib/debt';
 import { fmt, parseMoney } from '../lib/money';
 import { isDebtType, updateAccount } from '../lib/ops';
@@ -54,7 +55,10 @@ export default function DebtPage() {
   const setDebt = (id: string, patch: Partial<{ apr: number; minPayment: number }>) =>
     update((d) => {
       const acct = d.accounts.find((a) => a.id === id)!;
-      return updateAccount(d, id, { debt: { apr: 0, minPayment: 0, ...acct.debt, ...patch } });
+      const debt = { apr: 0, minPayment: 0, ...acct.debt, ...patch };
+      // Loans keep their payment category's target in step.
+      if (acct.loan) return updateLoan(d, id, { apr: debt.apr, payment: debt.minPayment, escrow: acct.loan.escrow, kind: acct.loan.kind });
+      return updateAccount(d, id, { debt });
     });
 
   if (!debtAccounts.length) {
