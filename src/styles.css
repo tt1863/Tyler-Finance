@@ -948,6 +948,52 @@ textarea:focus {
   box-shadow: none;
 }
 
+/* Payees */
+.payees-page h1 {
+  margin-bottom: 0.5rem;
+}
+.payee-search {
+  width: 100%;
+  margin: 0.75rem 0;
+}
+.payee-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.payee-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 40%);
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.payee-row:first-child {
+  border-top: none;
+}
+.payee-row:hover {
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+}
+.payee-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.payee-cat {
+  text-align: right;
+}
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
 /* Search filters */
 .filter-panel {
   display: grid;

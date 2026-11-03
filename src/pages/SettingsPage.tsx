@@ -78,6 +78,14 @@ export default function SettingsPage() {
 
       <SyncPanel />
 
+      <section className="card">
+        <h3>Payees</h3>
+        <p className="hint">Rename or merge payees, and choose the category filled in for each.</p>
+        <a className="btn" href="#/payees">
+          Manage payees
+        </a>
+      </section>
+
       <FlagsPanel />
 
       <section className="card">
