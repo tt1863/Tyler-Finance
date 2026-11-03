@@ -30,6 +30,10 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
   `_shared/importPlan.ts` (pure import/matching logic, unit-tested), `supabase/bank.sql`.
   Imported transactions have `bankId`; edits must keep it (see `saveTransaction`).
 
+- Offline: `build/serviceWorker.ts` (Vite plugin) writes `dist/sw.js`, which saves every file
+  of the build (cache per scope + build hash); `src/lib/updates.ts` registers it and shows the
+  "new version" bar. Cache lookups must use `ignoreVary` (module scripts send `Origin`).
+
 ## Phone layout rules
 
 - Text fields must be at least 16px on phones, or iOS Safari zooms in on tap and stays zoomed.

@@ -588,6 +588,58 @@ textarea:focus {
   color: var(--text-2);
 }
 
+/* Quick budget */
+.quick-budget {
+  margin: 0.75rem 0;
+}
+.quick-budget h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.quick-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.35rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  min-height: 40px;
+}
+.quick-option:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.quick-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.quick-option.wide {
+  padding: 0.65rem 0.8rem;
+  margin: 0;
+}
+.quick-option.wide > span:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.quick-change {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+.inspector-sheet .btn {
+  margin: 0.25rem 0.25rem 0 0;
+}
+
 /* Accounts / register */
 .account-header {
   display: flex;
@@ -889,6 +941,25 @@ textarea:focus {
 }
 .bank-mark {
   font-size: 0.8em;
+}
+
+/* New version available */
+.update-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--nav-bg);
+  color: #fff;
+  padding: 0.5rem 0.6rem 0.5rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  font-size: 0.9rem;
 }
 
 /* Sync */
@@ -1215,6 +1286,69 @@ textarea:focus {
 }
 .data-table .num {
   text-align: right;
+}
+
+/* Debt payoff */
+.debt-page h1 {
+  margin-bottom: 1rem;
+}
+.debt-page .hero-number {
+  font-size: 1.6rem;
+}
+.debt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin: 1rem 0 0.25rem;
+}
+.debt-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  max-width: 180px;
+}
+.debt-controls .label {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.debt-list {
+  display: flex;
+  flex-direction: column;
+}
+.debt-row {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 0;
+}
+.debt-row p {
+  margin: 0.4rem 0 0;
+}
+.debt-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.debt-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.debt-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.debt-money {
+  text-align: left;
+  border-color: var(--border);
+  background: var(--surface);
+  min-height: 40px;
 }
 
 /* Settings */

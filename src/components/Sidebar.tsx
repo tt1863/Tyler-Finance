@@ -59,6 +59,9 @@ export default function Sidebar({
         <a href="#/reports" className={`nav-link ${current === 'reports' ? 'active' : ''}`}>
           📊 Reports
         </a>
+        <a href="#/debt" className={`nav-link ${current === 'debt' ? 'active' : ''}`}>
+          📉 Debt Payoff
+        </a>
         <a href="#/accounts" className={`nav-link ${current === 'accounts' && !currentArg ? 'active' : ''}`}>
           🏦 All Accounts
         </a>

@@ -118,7 +118,8 @@ export function LineChart({ labels, values, name, color }: { labels: string[]; v
   const y = (v: number) => PAD.top + ((hi - v) / (hi - lo || 1)) * innerH;
   const ticks = [...lower.slice(1).reverse(), ...upper];
   const path = values.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ');
-  const labelEvery = Math.ceil(labels.length / 8);
+  // At most 5 month labels, so they never overlap on a phone.
+  const labelEvery = Math.ceil(labels.length / 5);
 
   return (
     <div className="chart">
