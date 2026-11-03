@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { GroupedBarChart, LineChart } from '../components/Charts';
 import { OUTFLOWS_NEEDED, ageOfMoney, agedOutflows } from '../lib/ageOfMoney';
 import { accountBalances, computeActivity, netWorthByMonth } from '../lib/budget';
-import { addMonths, currentMonth, dateLabel, monthLabel, monthOf, monthRange } from '../lib/dates';
+import { addMonths, currentMonth, dateLabel, monthLabel, monthOf, monthRange, today } from '../lib/dates';
 import { fmt } from '../lib/money';
-import { spendingTrend, type ReportScope } from '../lib/reports';
+import { csvMoney, download, toCsv } from '../lib/download';
+import { linesTable, spendingBreakdown, spendingTrend, type ReportScope, type SpendingLine } from '../lib/reports';
 import { useData } from '../lib/store';
 import { READY_TO_ASSIGN } from '../lib/types';
 
@@ -56,25 +57,8 @@ export default function ReportsPage({ initialTab }: { initialTab?: string }) {
 
   const { activity, income } = useMemo(() => computeActivity(data), [data]);
 
-  const spending = useMemo(() => {
-    const payment = new Set(data.categories.filter((c) => c.ccAccountId).map((c) => c.id));
-    const totals = new Map<string, number>();
-    for (const m of months) {
-      for (const [catId, amt] of Object.entries(activity[m] ?? {})) {
-        if (payment.has(catId)) continue;
-        const cat = data.categories.find((c) => c.id === catId);
-        const key = byGroup ? (cat?.groupId ?? 'other') : catId;
-        totals.set(key, (totals.get(key) ?? 0) - amt);
-      }
-    }
-    const name = (key: string) =>
-      byGroup
-        ? (data.groups.find((g) => g.id === key)?.name ?? 'Other')
-        : (data.categories.find((c) => c.id === key)?.name ?? 'Deleted category');
-    const list = [...totals.entries()].filter(([, v]) => v > 0).map(([k, v]) => ({ key: k, name: name(k), value: v }));
-    list.sort((a, b) => b.value - a.value);
-    return list;
-  }, [data, activity, months.join(), byGroup]);
+  const spending = useMemo(() => spendingBreakdown(data, months, byGroup), [data, months.join(), byGroup]);
+  const [openRow, setOpenRow] = useState<string | null>(null);
   const totalSpent = spending.reduce((s, x) => s + x.value, 0);
   const maxSpent = spending[0]?.value ?? 1;
 
@@ -164,17 +148,42 @@ export default function ReportsPage({ initialTab }: { initialTab?: string }) {
           </div>
           <div className="hbars">
             {spending.map((s) => (
-              <div key={s.key} className="hbar-row" title={`${s.name}: ${fmt(s.value)}`}>
-                <span className="hbar-label truncate">{s.name}</span>
-                <span className="hbar-track">
-                  <span className="hbar-fill" style={{ width: `${(s.value / maxSpent) * 100}%` }} />
-                </span>
-                <span className="hbar-value">{fmt(s.value)}</span>
-                <span className="hbar-pct muted">{totalSpent ? Math.round((s.value / totalSpent) * 100) : 0}%</span>
+              <div key={s.key}>
+                <button
+                  className={`hbar-row tappable ${openRow === s.key ? 'open' : ''}`}
+                  aria-expanded={openRow === s.key}
+                  onClick={() => setOpenRow(openRow === s.key ? null : s.key)}
+                >
+                  <span className="hbar-label truncate">{s.name}</span>
+                  <span className="hbar-track">
+                    <span className="hbar-fill" style={{ width: `${(s.value / maxSpent) * 100}%` }} />
+                  </span>
+                  <span className="hbar-value">{fmt(s.value)}</span>
+                  <span className="hbar-pct muted">{totalSpent ? Math.round((s.value / totalSpent) * 100) : 0}%</span>
+                </button>
+                {openRow === s.key && <LineList lines={s.lines} catName={byGroup ? catName : undefined} />}
               </div>
             ))}
             {spending.length === 0 && <p className="empty">No spending in this period.</p>}
           </div>
+          {spending.length > 0 && (
+            <ExportButtons
+              onSummary={() =>
+                download(
+                  `spending-${months[0]}-to-${to}.csv`,
+                  toCsv([
+                    [byGroup ? 'Category Group' : 'Category', 'Spent', 'Percent'],
+                    ...spending.map((x) => [x.name, csvMoney(x.value), Math.round((x.value / totalSpent) * 100)]),
+                    ['Total', csvMoney(totalSpent), 100],
+                  ]),
+                  'text/csv',
+                )
+              }
+              onLines={() =>
+                download(`spending-transactions-${months[0]}-to-${to}.csv`, toCsv(linesTable(data, spending.flatMap((x) => x.lines))), 'text/csv')
+              }
+            />
+          )}
         </div>
       )}
 
@@ -226,25 +235,21 @@ export default function ReportsPage({ initialTab }: { initialTab?: string }) {
                 {monthLabel(shownMonth)} · {fmt(trend.values[trendMonths.indexOf(shownMonth)])}
               </h3>
               {monthLines.length === 0 && <p className="empty">No spending this month.</p>}
-              <ul className="report-lines">
-                {monthLines.map((l, i) => (
-                  <li key={`${l.txId}-${i}`}>
-                    <a href={`#/accounts/${l.accountId}`} className="report-line">
-                      <span className="rl-main">
-                        <span className="truncate">{l.payee || '(no payee)'}</span>
-                        <small className="muted truncate">
-                          {dateLabel(l.date)} · {catName(l.categoryId)}
-                        </small>
-                      </span>
-                      <span className={l.spent < 0 ? 'pos' : ''}>{fmt(l.spent)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <LineList lines={monthLines} catName={catName} />
             </div>
           ) : (
             <p className="hint">Tap a month to see its transactions.</p>
           )}
+          <ExportButtons
+            onSummary={() =>
+              download(
+                `spending-trend-${trendMonths[0]}-to-${to}.csv`,
+                toCsv([['Month', 'Spent'], ...trendMonths.map((m, i) => [m, csvMoney(trend.values[i])]), ['Average', csvMoney(trend.average)]]),
+                'text/csv',
+              )
+            }
+            onLines={() => download(`spending-trend-transactions-${trendMonths[0]}-to-${to}.csv`, toCsv(linesTable(data, trend.lines)), 'text/csv')}
+          />
         </div>
       )}
 
@@ -277,6 +282,18 @@ export default function ReportsPage({ initialTab }: { initialTab?: string }) {
               ))}
             </tbody>
           </table>
+          <ExportButtons
+            onSummary={() =>
+              download(
+                `income-vs-spending-${today()}.csv`,
+                toCsv([
+                  ['Month', 'Income', 'Spending', 'Net'],
+                  ...incomeVsSpending.map((x) => [x.month, csvMoney(x.income), csvMoney(x.spent), csvMoney(x.income - x.spent)]),
+                ]),
+                'text/csv',
+              )
+            }
+          />
         </div>
       )}
 
@@ -338,8 +355,52 @@ export default function ReportsPage({ initialTab }: { initialTab?: string }) {
             labels={netWorth.map((x) => monthLabel(x.month, true))}
             values={netWorth.map((x) => x.value)}
           />
+          <ExportButtons
+            onSummary={() =>
+              download(`net-worth-${today()}.csv`, toCsv([['Month', 'Net Worth'], ...netWorth.map((x) => [x.month, csvMoney(x.value)])]), 'text/csv')
+            }
+          />
         </div>
       )}
     </div>
+  );
+}
+
+function ExportButtons({ onSummary, onLines }: { onSummary: () => void; onLines?: () => void }) {
+  return (
+    <div className="export-row">
+      <button className="btn small" onClick={onSummary}>
+        ⬇ Export CSV
+      </button>
+      {onLines && (
+        <button className="btn small" onClick={onLines}>
+          ⬇ Transactions CSV
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The transactions behind a report number; each opens its account. */
+function LineList({ lines, catName }: { lines: SpendingLine[]; catName?: (id: string) => string }) {
+  if (lines.length === 0) return <p className="empty">No transactions.</p>;
+  return (
+    <ul className="report-lines">
+      {lines.map((l, i) => (
+        <li key={`${l.txId}-${i}`}>
+          <a href={`#/accounts/${l.accountId}`} className="report-line">
+            <span className="rl-main">
+              <span className="truncate">{l.payee || '(no payee)'}</span>
+              <small className="muted truncate">
+                {dateLabel(l.date)}
+                {catName && ` · ${catName(l.categoryId)}`}
+                {l.memo && ` · ${l.memo}`}
+              </small>
+            </span>
+            <span className={l.spent < 0 ? 'pos' : ''}>{fmt(l.spent)}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }

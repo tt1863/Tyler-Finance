@@ -68,3 +68,56 @@ export function spendingTrend(data: BudgetData, months: MonthKey[], scope: Repor
   lines.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { values, total, average: months.length ? Math.round(total / months.length) : 0, lines };
 }
+
+export interface BreakdownRow {
+  key: string;
+  name: string;
+  value: Cents;
+  lines: SpendingLine[];
+}
+
+/** Spending by category (or category group) over the given months, largest first. */
+export function spendingBreakdown(data: BudgetData, months: MonthKey[], byGroup: boolean): BreakdownRow[] {
+  const wanted = new Set(months);
+  const cats = new Map(data.categories.map((c) => [c.id, c]));
+  const rows = new Map<string, BreakdownRow>();
+  for (const l of spendingLines(data)) {
+    if (!wanted.has(l.month)) continue;
+    const cat = cats.get(l.categoryId);
+    const key = byGroup ? (cat?.groupId ?? 'other') : l.categoryId;
+    let row = rows.get(key);
+    if (!row) {
+      const name = byGroup
+        ? (data.groups.find((g) => g.id === key)?.name ?? 'Other')
+        : (cat?.name ?? 'Deleted category');
+      rows.set(key, (row = { key, name, value: 0, lines: [] }));
+    }
+    row.value += l.spent;
+    row.lines.push(l);
+  }
+  const list = [...rows.values()].filter((r) => r.value > 0);
+  for (const r of list) r.lines.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return list.sort((a, b) => b.value - a.value);
+}
+
+/** Spending lines as CSV rows (header first), for exporting a report's transactions. */
+export function linesTable(data: BudgetData, lines: SpendingLine[]): (string | number)[][] {
+  const accounts = new Map(data.accounts.map((a) => [a.id, a.name]));
+  const cats = new Map(data.categories.map((c) => [c.id, c]));
+  const groups = new Map(data.groups.map((g) => [g.id, g.name]));
+  return [
+    ['Date', 'Account', 'Payee', 'Category Group', 'Category', 'Memo', 'Spent'],
+    ...lines.map((l) => {
+      const cat = cats.get(l.categoryId);
+      return [
+        l.date,
+        accounts.get(l.accountId) ?? '',
+        l.payee,
+        (cat && groups.get(cat.groupId)) ?? '',
+        cat?.name ?? 'Deleted category',
+        l.memo,
+        (l.spent / 100).toFixed(2),
+      ];
+    }),
+  ];
+}

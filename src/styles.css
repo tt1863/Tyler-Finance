@@ -1351,6 +1351,31 @@ a.btn {
   border-radius: 0 4px 4px 0;
   min-width: 2px;
 }
+button.hbar-row {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.2rem 0;
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.hbar-row.open .hbar-label {
+  font-weight: 600;
+}
+.hbars .report-lines {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--surface-2);
+}
+.export-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
 .hbar-row:hover .hbar-fill {
   filter: brightness(1.15);
 }
