@@ -419,6 +419,16 @@ textarea:focus {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.aom {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  text-decoration: none;
+  white-space: nowrap;
+  align-self: center;
+}
+.aom b {
+  color: var(--text);
+}
 .rta-label {
   font-size: 0.85rem;
   font-weight: 500;
@@ -1846,7 +1856,7 @@ a.btn {
   }
   .segmented {
     width: 100%;
-    overflow-x: auto;
+    flex-wrap: wrap;
   }
   .segmented button {
     padding: 0.45rem 0.6rem;
