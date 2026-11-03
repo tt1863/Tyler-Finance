@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { GroupedBarChart, LineChart } from '../components/Charts';
 import { accountBalances, computeActivity, netWorthByMonth } from '../lib/budget';
-import { addMonths, currentMonth, monthLabel, monthOf, monthRange } from '../lib/dates';
+import { addMonths, currentMonth, dateLabel, monthLabel, monthOf, monthRange } from '../lib/dates';
 import { fmt } from '../lib/money';
+import { spendingTrend, type ReportScope } from '../lib/reports';
 import { useData } from '../lib/store';
 import { READY_TO_ASSIGN } from '../lib/types';
 
@@ -17,13 +18,26 @@ const RANGES = [
 const BLUE = 'var(--series-1)';
 const ORANGE = 'var(--series-2)';
 
-type Tab = 'spending' | 'income' | 'networth';
+type Tab = 'spending' | 'trends' | 'income' | 'networth';
+
+const TREND_RANGES = [3, 6, 12];
+
+function scopeKey(s: ReportScope) {
+  return s.kind === 'all' ? 'all' : `${s.kind}:${s.id}`;
+}
+function parseScope(v: string): ReportScope {
+  const [kind, id] = v.split(':');
+  return kind === 'group' || kind === 'category' ? { kind, id } : { kind: 'all' };
+}
 
 export default function ReportsPage() {
   const data = useData();
   const [tab, setTab] = useState<Tab>('spending');
   const [range, setRange] = useState(2);
   const [byGroup, setByGroup] = useState(false);
+  const [trendRange, setTrendRange] = useState(6);
+  const [scope, setScope] = useState<ReportScope>({ kind: 'all' });
+  const [trendMonth, setTrendMonth] = useState<string | null>(null);
   const to = currentMonth();
   const from = addMonths(to, -range);
   const months = monthRange(from, to);
@@ -69,6 +83,13 @@ export default function ReportsPage() {
     });
   }, [data, activity, income, chartMonths.join()]);
 
+  const trendMonths = monthRange(addMonths(to, -(trendRange - 1)), to);
+  const trend = useMemo(() => spendingTrend(data, trendMonths, scope), [data, trendMonths.join(), scope]);
+  const shownMonth = trendMonth && trendMonths.includes(trendMonth) ? trendMonth : null;
+  const monthLines = shownMonth ? trend.lines.filter((l) => l.month === shownMonth) : [];
+  const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? 'Deleted category';
+  const budgetGroups = data.groups.filter((g) => !g.system && data.categories.some((c) => c.groupId === g.id && !c.ccAccountId));
+
   const netWorth = useMemo(() => netWorthByMonth(data, chartFrom, to), [data, chartFrom, to]);
   const balances = useMemo(() => accountBalances(data), [data]);
   let assets = 0;
@@ -87,7 +108,8 @@ export default function ReportsPage() {
           {(
             [
               ['spending', 'Spending'],
-              ['income', 'Income vs Spending'],
+              ['trends', 'Trends'],
+              ['income', 'Income'],
               ['networth', 'Net Worth'],
             ] as const
           ).map(([v, l]) => (
@@ -134,6 +156,76 @@ export default function ReportsPage() {
             ))}
             {spending.length === 0 && <p className="empty">No spending in this period.</p>}
           </div>
+        </div>
+      )}
+
+      {tab === 'trends' && (
+        <div className="card">
+          <div className="toolbar tight">
+            <select value={trendRange} onChange={(e) => setTrendRange(Number(e.target.value))} aria-label="Range">
+              {TREND_RANGES.map((n) => (
+                <option key={n} value={n}>
+                  Last {n} months
+                </option>
+              ))}
+            </select>
+            <select value={scopeKey(scope)} onChange={(e) => setScope(parseScope(e.target.value))} aria-label="Categories">
+              <option value="all">All categories</option>
+              {budgetGroups.map((g) => (
+                <optgroup key={g.id} label={g.name}>
+                  <option value={`group:${g.id}`}>All {g.name}</option>
+                  {data.categories
+                    .filter((c) => c.groupId === g.id && !c.ccAccountId)
+                    .map((c) => (
+                      <option key={c.id} value={`category:${c.id}`}>
+                        {c.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div className="tiles trend-tiles">
+            <div className="tile">
+              <span className="label">Average / month</span>
+              <span className="hero-number">{fmt(trend.average)}</span>
+            </div>
+            <div className="tile">
+              <span className="label">Total</span>
+              <span className="tile-number">{fmt(trend.total)}</span>
+            </div>
+          </div>
+          <GroupedBarChart
+            labels={trendMonths.map((m) => monthLabel(m, true).split(' ')[0])}
+            series={[{ name: 'Spending', color: BLUE, values: trend.values }]}
+            selected={shownMonth ? trendMonths.indexOf(shownMonth) : null}
+            onSelect={(i) => setTrendMonth(trendMonths[i])}
+          />
+          {shownMonth ? (
+            <div className="trend-month">
+              <h3>
+                {monthLabel(shownMonth)} · {fmt(trend.values[trendMonths.indexOf(shownMonth)])}
+              </h3>
+              {monthLines.length === 0 && <p className="empty">No spending this month.</p>}
+              <ul className="report-lines">
+                {monthLines.map((l, i) => (
+                  <li key={`${l.txId}-${i}`}>
+                    <a href={`#/accounts/${l.accountId}`} className="report-line">
+                      <span className="rl-main">
+                        <span className="truncate">{l.payee || '(no payee)'}</span>
+                        <small className="muted truncate">
+                          {dateLabel(l.date)} · {catName(l.categoryId)}
+                        </small>
+                      </span>
+                      <span className={l.spent < 0 ? 'pos' : ''}>{fmt(l.spent)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="hint">Tap a month to see its transactions.</p>
+          )}
         </div>
       )}
 
