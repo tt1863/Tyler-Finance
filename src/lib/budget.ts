@@ -8,6 +8,12 @@ export interface CategoryMonth {
   assigned: Cents;
   activity: Cents;
   available: Cents;
+  /**
+   * Part of a negative Available that came from credit card spending the
+   * category couldn't cover (YNAB's yellow "credit overspending"). It became
+   * card debt, so it doesn't come out of next month's Ready to Assign.
+   */
+  creditOverspent: Cents;
 }
 
 export interface MonthSummary {
@@ -18,7 +24,7 @@ export interface MonthSummary {
   assigned: Cents;
   activity: Cents;
   available: Cents;
-  /** Overspending from last month, taken out of Ready to Assign this month. */
+  /** Cash overspending from last month, taken out of Ready to Assign this month. */
   overspentLastMonth: Cents;
   /** Amount assigned in months after this one. */
   assignedInFuture: Cents;
@@ -30,12 +36,23 @@ export function categoryParts(t: Transaction): { categoryId: string | null; amou
   return t.splits?.length ? t.splits : [{ categoryId: t.categoryId, amount: t.amount }];
 }
 
-const EMPTY: CategoryMonth = { carryIn: 0, assigned: 0, activity: 0, available: 0 };
+const EMPTY: CategoryMonth = { carryIn: 0, assigned: 0, activity: 0, available: 0, creditOverspent: 0 };
+
+/** One category's share of a transaction, in date order within its month. */
+interface CategoryEntry {
+  order: string;
+  amount: Cents;
+  /** Set for spending on a credit card: that card's payment category. */
+  payCat?: string;
+}
 
 /**
- * Category activity per month. Credit card handling mirrors YNAB: spending on a
- * card with a category moves that money into the card's payment category, and
- * payments to the card take it back out.
+ * Category activity per month, plus what's needed for credit cards.
+ *
+ * Credit cards work like YNAB: spending on a card moves the part the category
+ * can cover into the card's payment category (worked out month by month in
+ * computeBudget, since it depends on what's available). Refunds, income and
+ * payments on the card move money in or out of the payment category directly.
  */
 export function computeActivity(data: BudgetData) {
   const accounts = new Map(data.accounts.map((a) => [a.id, a]));
@@ -44,6 +61,7 @@ export function computeActivity(data: BudgetData) {
 
   const activity: Record<MonthKey, Record<string, Cents>> = {};
   const income: Record<MonthKey, Cents> = {};
+  const entries: Record<MonthKey, Record<string, CategoryEntry[]>> = {};
   const add = (m: MonthKey, cat: string, amt: Cents) => {
     const row = (activity[m] ??= {});
     row[cat] = (row[cat] ?? 0) + amt;
@@ -53,28 +71,37 @@ export function computeActivity(data: BudgetData) {
     const account = accounts.get(t.accountId);
     if (!account?.onBudget) continue;
     const m = monthOf(t.date);
+    const payCat = account.type === 'credit' ? paymentCategory.get(account.id) : undefined;
+    const order = `${t.date}|${t.id}`;
     for (const part of categoryParts(t)) {
       if (part.categoryId === READY_TO_ASSIGN) income[m] = (income[m] ?? 0) + part.amount;
-      else if (part.categoryId) add(m, part.categoryId, part.amount);
+      else if (part.categoryId) {
+        add(m, part.categoryId, part.amount);
+        const spendOnCard = payCat && part.amount < 0 && part.categoryId !== payCat;
+        ((entries[m] ??= {})[part.categoryId] ??= []).push({ order, amount: part.amount, payCat: spendOnCard ? payCat : undefined });
+      }
     }
 
-    const payCat = account.type === 'credit' ? paymentCategory.get(account.id) : undefined;
     if (payCat) {
-      const otherOnBudget = t.transferAccountId
-        ? accounts.get(t.transferAccountId)?.onBudget === true
-        : false;
-      // Uncategorized, non-transfer entries (like starting debt) don't move money.
+      const otherOnBudget = t.transferAccountId ? accounts.get(t.transferAccountId)?.onBudget === true : false;
+      // Card spending is handled in computeBudget. Everything else that touches
+      // the budget (refunds, income, payments, transfers) moves money in or out
+      // of the payment category in full. Uncategorized entries like starting
+      // debt don't move money.
       for (const part of categoryParts(t)) {
+        const spending = part.amount < 0 && part.categoryId !== null && part.categoryId !== payCat;
+        if (spending) continue;
         if (part.categoryId !== null || otherOnBudget) add(m, payCat, -part.amount);
       }
     }
   }
-  return { activity, income };
+  for (const row of Object.values(entries)) for (const list of Object.values(row)) list.sort((a, b) => (a.order < b.order ? -1 : 1));
+  return { activity, income, entries, paymentCategoryIds: new Set(paymentCategory.values()) };
 }
 
 /** Compute every month from the first month with data through `through` (at least). */
 export function computeBudget(data: BudgetData, through: MonthKey): Map<MonthKey, MonthSummary> {
-  const { activity, income } = computeActivity(data);
+  const { activity, income, entries, paymentCategoryIds } = computeActivity(data);
   const months = new Set<MonthKey>([through, ...Object.keys(activity), ...Object.keys(income)]);
   for (const [m, row] of Object.entries(data.assigned)) {
     if (Object.values(row).some((v) => v !== 0)) months.add(m);
@@ -95,6 +122,8 @@ export function computeBudget(data: BudgetData, through: MonthKey): Map<MonthKey
   const catIds = new Set(data.categories.map((c) => c.id));
   for (const row of Object.values(activity)) for (const id of Object.keys(row)) catIds.add(id);
   for (const row of Object.values(data.assigned)) for (const id of Object.keys(row)) catIds.add(id);
+  // Payment categories last: card spending in other categories feeds them.
+  const ordered = [...catIds].sort((a, b) => Number(paymentCategoryIds.has(a)) - Number(paymentCategoryIds.has(b)));
 
   const result = new Map<MonthKey, MonthSummary>();
   let prev: Record<string, CategoryMonth> = {};
@@ -105,20 +134,39 @@ export function computeBudget(data: BudgetData, through: MonthKey): Map<MonthKey
 
   for (const m of monthRange(first, last)) {
     const cats: Record<string, CategoryMonth> = {};
+    const moved: Record<string, Cents> = {};
     let totalAssigned = 0;
     let totalActivity = 0;
     let totalAvailable = 0;
     let overspent = 0;
-    for (const id of catIds) {
+    for (const id of ordered) {
       const carryIn = Math.max(0, prev[id]?.available ?? 0);
       const assigned = data.assigned[m]?.[id] ?? 0;
-      const act = activity[m]?.[id] ?? 0;
+      let act = activity[m]?.[id] ?? 0;
+      if (paymentCategoryIds.has(id)) act += moved[id] ?? 0;
+
+      // Walk the month's transactions in date order: each card purchase moves
+      // as much as the category has available to the card's payment category;
+      // the rest is credit overspending (new card debt).
+      let running = carryIn + assigned;
+      let unfundedCard = 0;
+      for (const e of entries[m]?.[id] ?? []) {
+        if (e.payCat) {
+          const funded = Math.min(-e.amount, Math.max(0, running));
+          moved[e.payCat] = (moved[e.payCat] ?? 0) + funded;
+          unfundedCard += -e.amount - funded;
+        }
+        running += e.amount;
+      }
+
       const available = carryIn + assigned + act;
-      cats[id] = { carryIn, assigned, activity: act, available };
+      const creditOverspent = available < 0 ? Math.min(unfundedCard, -available) : 0;
+      cats[id] = { carryIn, assigned, activity: act, available, creditOverspent };
       totalAssigned += assigned;
       totalActivity += act;
       totalAvailable += available;
-      if (available < 0) overspent += -available;
+      // Only cash overspending comes out of next month's Ready to Assign.
+      if (available < 0) overspent += -available - creditOverspent;
     }
     cumIncome += income[m] ?? 0;
     cumAssigned += assignedTotalByMonth[m] ?? 0;

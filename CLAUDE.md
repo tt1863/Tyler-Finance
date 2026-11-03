@@ -11,6 +11,8 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - Every open pull request gets a preview at `/preview/<branch-without-claude/>/`
   (built by `scripts/build-site.sh`; the workflow comments the link on the PR).
   Previews use separate storage and never sync, so they can't touch the real budget.
+- The backlog is GitHub issues (labels: wave, priority, effort). Work from an issue and put
+  "Closes #N" in the pull request so merging closes it.
 - Merge only when the owner says the feature is ready to ship.
 - Before pushing: `npm run typecheck`, `npm test`, `npm run build`, and check the UI
   at phone width (the owner mainly uses the app on a phone).
@@ -22,6 +24,10 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
 - `src/lib/store.ts` — zustand store persisted to localStorage (key `tyler-finance`).
   New data fields need a default in `normalize()` so older saved budgets keep loading.
 - Money is integer cents; positive = inflow.
+- Credit cards follow YNAB: card spending moves only the funded part of a purchase to the
+  card's payment category (`computeBudget` walks each month's transactions in date order);
+  the rest is `creditOverspent` (yellow), which resets at month end without reducing
+  Ready to Assign. Cash overspending (red) comes out of next month.
 
 - Offline: `build/serviceWorker.ts` (Vite plugin) writes `dist/sw.js`, which saves every file
   of the build (cache per scope + build hash); `src/lib/updates.ts` registers it and shows the

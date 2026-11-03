@@ -155,8 +155,18 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                   {cats.map((c) => {
                     const cm = categoryMonth(summary, c.id);
                     const ts = c.target ? targetStatus(c.target, cm, month) : null;
+                    // Red: cash overspending (comes out of next month). Yellow: only
+                    // credit overspending (added to the card balance), or a target
+                    // that still needs money.
+                    const creditOnly = cm.available < 0 && cm.creditOverspent >= -cm.available;
                     const pill =
-                      cm.available < 0 ? 'negative' : ts && ts.underfunded > 0 ? 'warning' : cm.available > 0 ? 'positive' : 'zero';
+                      cm.available < 0 && !creditOnly
+                        ? 'negative'
+                        : creditOnly || (ts && ts.underfunded > 0)
+                          ? 'warning'
+                          : cm.available > 0
+                            ? 'positive'
+                            : 'zero';
                     return (
                       <div
                         key={c.id}
@@ -298,7 +308,7 @@ function CategoryInspector({
         <dt>Activity</dt>
         <dd>{fmt(cm.activity)}</dd>
         <dt>Available</dt>
-        <dd className={cm.available < 0 ? 'neg' : ''}>{fmt(cm.available)}</dd>
+        <dd className={cm.available >= 0 ? '' : cm.creditOverspent >= -cm.available ? 'credit-text' : 'neg'}>{fmt(cm.available)}</dd>
         {upcomingAmount !== 0 && (
           <>
             <dt>Scheduled later this month</dt>
@@ -326,9 +336,23 @@ function CategoryInspector({
         <p className="hint">No target yet.</p>
       )}
       {cm.available < 0 && (
-        <button className="btn small" onClick={() => onAssign(cm.assigned - cm.available)}>
-          Cover overspending ({fmt(-cm.available)})
-        </button>
+        <div className="overspent-box">
+          {cm.creditOverspent > 0 && (
+            <p>
+              <b className="credit-text">{fmt(cm.creditOverspent)} overspent on a credit card.</b> It was added to the card's balance
+              as new debt. Cover it to set the money aside for the card bill; otherwise it resets at month end.
+            </p>
+          )}
+          {-cm.available > cm.creditOverspent && (
+            <p>
+              <b className="neg">{fmt(-cm.available - cm.creditOverspent)} overspent in cash.</b> If it isn't covered, it comes out of
+              next month's Ready to Assign.
+            </p>
+          )}
+          <button className="btn small" onClick={() => onAssign(cm.assigned - cm.available)}>
+            Cover overspending ({fmt(-cm.available)})
+          </button>
+        </div>
       )}
       {category.note && <p className="note">{category.note}</p>}
       <CategoryQuickBudget category={category} month={month} />

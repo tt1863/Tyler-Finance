@@ -37,13 +37,18 @@ function setup() {
 const spend = (d: BudgetData, accountId: string, categoryId: string | null, amount: number, date = day(5), transferAccountId?: string) =>
   saveTransaction(d, { accountId, date, payee: 'Store', categoryId, memo: '', amount, cleared: 'uncleared', transferAccountId });
 
-/** Envelope invariant: money in categories + Ready to Assign == cash in budget accounts. */
+/**
+ * Envelope invariant: money in categories + Ready to Assign == cash in budget
+ * accounts. Credit overspending this month is new card debt rather than money
+ * taken from the budget, so it's added back.
+ */
 function checkInvariant(d: BudgetData, month = M) {
   const s = computeBudget(d, month).get(month)!;
   const balances = accountBalances(d);
   let cash = 0;
   for (const a of d.accounts) if (a.onBudget && a.type !== 'credit') cash += balances[a.id].working;
-  return { lhs: s.readyToAssign + s.available, cash };
+  const credit = Object.values(s.categories).reduce((t, c) => t + c.creditOverspent, 0);
+  return { lhs: s.readyToAssign + s.available + credit, cash };
 }
 
 describe('budget math', () => {
@@ -160,7 +165,7 @@ describe('budget math', () => {
 });
 
 describe('targets', () => {
-  const cm = { carryIn: 10000, assigned: 5000, activity: 0, available: 15000 };
+  const cm = { carryIn: 10000, assigned: 5000, activity: 0, available: 15000, creditOverspent: 0 };
   it('monthly', () => expect(targetStatus({ type: 'monthly', amount: 20000 }, cm, M).underfunded).toBe(15000));
   it('refill', () => expect(targetStatus({ type: 'refill', amount: 20000 }, cm, M).underfunded).toBe(5000));
   it('by date', () => {
