@@ -306,6 +306,17 @@ export function updateCategory(data: BudgetData, id: string, patch: Partial<Cate
   };
 }
 
+/**
+ * Snooze a category's target for one month (or wake it with null). Like YNAB,
+ * not available for credit card payment categories.
+ */
+export function snoozeTarget(data: BudgetData, categoryId: string, month: MonthKey | null): BudgetData {
+  const c = data.categories.find((x) => x.id === categoryId);
+  if (!c?.target || c.ccAccountId) return data;
+  const { snoozed: _old, ...rest } = c.target;
+  return updateCategory(data, categoryId, { target: month ? { ...rest, snoozed: month } : rest });
+}
+
 /** Delete a category, moving its transactions and assigned money to another category. */
 export function deleteCategory(data: BudgetData, id: string, reassignTo: string | null): BudgetData {
   return removeCategoryRefs(structuredClone(data), id, reassignTo);

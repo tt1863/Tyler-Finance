@@ -8,7 +8,7 @@ import { CategoryQuickBudget, QuickBudgetModal } from '../components/QuickBudget
 import { categoryMonth, categoryTargetStatus, computeBudget, underfundedAmount } from '../lib/budget';
 import { addDays, addMonths, currentMonth, monthLabel, today } from '../lib/dates';
 import { fmt } from '../lib/money';
-import { addCategory, addGroup, needsCategory, setAssigned } from '../lib/ops';
+import { addCategory, addGroup, needsCategory, setAssigned, snoozeTarget } from '../lib/ops';
 import { go } from '../lib/route';
 import { upcoming } from '../lib/scheduled';
 import { findTransferPairs } from '../lib/transfers';
@@ -181,12 +181,13 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                           {ts && (
                             <span className="target-bar" title={`${ts.description}: ${fmt(c.target!.amount)}`}>
                               <span
-                                className={`target-fill ${ts.progress >= 1 ? 'done' : ''}`}
+                                className={`target-fill ${ts.snoozed ? 'snoozed' : ts.progress >= 1 ? 'done' : ''}`}
                                 style={{ width: `${Math.round(ts.progress * 100)}%` }}
                               />
                             </span>
                           )}
                           {ts && ts.underfunded > 0 && <span className="target-note">{fmt(ts.underfunded)} more needed</span>}
+                          {ts?.snoozed && <span className="target-note muted">Snoozed this month</span>}
                         </span>
                         <span className="num">
                           <MoneyInput
@@ -297,6 +298,7 @@ function CategoryInspector({
   inSheet?: boolean;
 }) {
   const data = useData();
+  const update = useStore((s) => s.update);
   const ts = categoryTargetStatus(data, category, cm, month);
   return (
     <div className={inSheet ? 'inspector-sheet' : 'card'}>
@@ -324,12 +326,27 @@ function CategoryInspector({
           <b>Target: {fmt(category.target!.amount)}</b> · {ts.description}
           {ts.needed > 0 && <div className="muted small">Needs {fmt(ts.needed)} this month</div>}
           <div className="target-bar wide">
-            <span className={`target-fill ${ts.progress >= 1 ? 'done' : ''}`} style={{ width: `${Math.round(ts.progress * 100)}%` }} />
+            <span className={`target-fill ${ts.snoozed ? 'snoozed' : ts.progress >= 1 ? 'done' : ''}`} style={{ width: `${Math.round(ts.progress * 100)}%` }} />
           </div>
-          {ts.underfunded > 0 ? (
-            <button className="btn primary small" onClick={() => onAssign(cm.assigned + ts.underfunded)}>
-              Assign {fmt(ts.underfunded)} to meet target
-            </button>
+          {ts.snoozed ? (
+            <p className="hint">
+              Snoozed for {monthLabel(month)}. It asks again next month.{' '}
+              <button className="link-btn small" onClick={() => update((d) => snoozeTarget(d, category.id, null))}>
+                Unsnooze
+              </button>
+            </p>
+          ) : ts.underfunded > 0 ? (
+            <div className="toolbar tight">
+              <button className="btn primary small" onClick={() => onAssign(cm.assigned + ts.underfunded)}>
+                Assign {fmt(ts.underfunded)} to meet target
+              </button>
+              {/* Like YNAB: only for the current month, never for card payments. */}
+              {month === currentMonth() && !category.ccAccountId && (
+                <button className="btn small" onClick={() => update((d) => snoozeTarget(d, category.id, month))}>
+                  Snooze this month
+                </button>
+              )}
+            </div>
           ) : (
             <p className="good">✓ On track this month</p>
           )}
