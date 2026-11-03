@@ -1,6 +1,7 @@
 import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
 import { uid } from './id';
+import { templateById } from './templates';
 import type {
   FlagColor,
   Split,
@@ -37,21 +38,32 @@ export function normalize(data: BudgetData): BudgetData {
   return { ...emptyData(), ...data, scheduled: data.scheduled ?? [], flagNames: data.flagNames ?? {} };
 }
 
-/** A starter set of categories similar to YNAB's defaults. */
-export function starterData(): BudgetData {
-  const data = emptyData();
-  const groups: Record<string, string[]> = {
-    Bills: ['Rent/Mortgage', 'Electric', 'Water', 'Internet', 'Phone', 'Insurance'],
-    Needs: ['Groceries', 'Transportation', 'Medical'],
-    Wants: ['Dining Out', 'Entertainment', 'Shopping', 'Vacation'],
-    Savings: ['Emergency Fund', 'Car Replacement'],
-  };
-  for (const [name, cats] of Object.entries(groups)) {
-    const g = { id: uid(), name, hidden: false };
-    data.groups.push(g);
-    for (const c of cats) data.categories.push({ id: uid(), groupId: g.id, name: c, hidden: false });
+/** A new budget with a template's categories (default: the standard set). */
+export function starterData(templateId = 'standard'): BudgetData {
+  return addTemplateGroups(emptyData(), templateId);
+}
+
+/**
+ * Add a template's groups and categories. Groups that already exist (same
+ * name) get only the categories they're missing. `only` limits it to some groups.
+ */
+export function addTemplateGroups(data: BudgetData, templateId: string, only?: string[]): BudgetData {
+  const d = structuredClone(data);
+  const norm = (s: string) => s.trim().toLowerCase();
+  for (const [name, cats] of Object.entries(templateById(templateId).groups)) {
+    if (only && !only.includes(name)) continue;
+    let g = d.groups.find((x) => !x.system && norm(x.name) === norm(name));
+    if (!g) {
+      g = { id: uid(), name, hidden: false };
+      d.groups.push(g);
+    }
+    const groupId = g.id;
+    for (const c of cats) {
+      if (d.categories.some((x) => x.groupId === groupId && norm(x.name) === norm(c))) continue;
+      d.categories.push({ id: uid(), groupId, name: c, hidden: false });
+    }
   }
-  return data;
+  return d;
 }
 
 export const isCashType = (t: AccountType) => t === 'checking' || t === 'savings' || t === 'cash';

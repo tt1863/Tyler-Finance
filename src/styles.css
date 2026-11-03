@@ -953,6 +953,7 @@ textarea:focus {
 .welcome-sync {
   width: 100%;
   margin-bottom: 1rem;
+  white-space: normal;
 }
 .welcome-signin {
   box-shadow: none;
@@ -1887,4 +1888,37 @@ button.hbar-row.open .hbar-label {
     padding: 0.45rem 0.6rem;
     font-size: 0.85rem;
   }
+}
+
+/* Category templates */
+.template-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+.template-pick h3 {
+  margin: 0;
+}
+.template-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.template-option:hover {
+  border-color: var(--primary);
+}
+.template-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
 }
