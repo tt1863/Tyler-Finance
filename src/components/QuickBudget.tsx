@@ -12,7 +12,7 @@ export function CategoryQuickBudget({ category, month }: { category: Category; m
   const update = useStore((s) => s.update);
   const months = useMemo(() => computeBudget(data, month), [data, month]);
   const current = months.get(month)?.categories[category.id]?.assigned ?? 0;
-  const options = QUICK_OPTIONS.map((o) => ({ ...o, amount: quickAmount(o.key, category, month, months) })).filter(
+  const options = QUICK_OPTIONS.map((o) => ({ ...o, amount: quickAmount(o.key, category, month, months, data) })).filter(
     (o) => o.amount !== null && !(o.key === 'resetAssigned' && current === 0),
   );
 

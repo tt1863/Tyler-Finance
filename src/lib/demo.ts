@@ -98,11 +98,11 @@ export function demoData(): BudgetData {
     }
   }
 
-  d = updateCategory(d, cat('Groceries'), { target: { type: 'refill', amount: 60000 } });
+  d = updateCategory(d, cat('Groceries'), { target: { type: 'weekly', amount: 15000, weekday: 0, behavior: 'refill' } });
   d = updateCategory(d, cat('Emergency Fund'), { target: { type: 'balance', amount: 1000000 } });
   d = updateCategory(d, cat('Vacation'), { target: { type: 'byDate', amount: 200000, month: addMonths(now, 8) } });
   d = updateCategory(d, cat('Rent/Mortgage'), { target: { type: 'monthly', amount: 145000 } });
-  d = updateCategory(d, cat('Car Replacement'), { target: { type: 'monthly', amount: 15000 } });
+  d = updateCategory(d, cat('Car Replacement'), { target: { type: 'yearly', amount: 180000, due: '12-31' } });
   const visaPay = d.categories.find((c) => c.ccAccountId === visa)!.id;
   // Fund the card payment so it matches what's owed, and move savings into the emergency fund.
   for (let i = 0; i < 3; i++) d = setAssigned(d, addMonths(start, i), visaPay, i === 0 ? 12000 : 15000);

@@ -260,7 +260,7 @@ export function assignUnderfunded(data: BudgetData, month: MonthKey, onlyIds?: s
   for (const c of data.categories) {
     if (c.hidden || (onlyIds && !onlyIds.includes(c.id))) continue;
     const cm = categoryMonth(summary, c.id);
-    const add = underfundedAmount(c, cm, month);
+    const add = underfundedAmount(c, cm, month, data);
     if (add > 0) d = setAssigned(d, month, c.id, cm.assigned + add);
   }
   return d;

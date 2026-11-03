@@ -34,13 +34,33 @@ export interface CategoryGroup {
   system?: boolean;
 }
 
-export type TargetType = 'monthly' | 'refill' | 'byDate' | 'balance';
+/**
+ * Target types (YNAB's names in quotes):
+ * - weekly / monthly / yearly: "Set aside another…" (behavior 'setAside') or
+ *   "Refill up to…" (behavior 'refill') each week, month or year.
+ * - refill: older saved form of monthly + refill.
+ * - custom: an amount due on a date ("Due on"), repeating monthly, yearly or not.
+ * - byDate: "Have a balance of…" by a month. balance: "Have a balance of…".
+ */
+export type TargetType = 'weekly' | 'monthly' | 'refill' | 'yearly' | 'custom' | 'byDate' | 'balance';
+
+export type TargetBehavior = 'setAside' | 'refill';
 
 export interface Target {
   type: TargetType;
   amount: Cents;
   /** Month the target is due (byDate only). */
   month?: MonthKey;
+  /** weekly / yearly / custom: set aside another, or refill (fill) up to. Default setAside. */
+  behavior?: TargetBehavior;
+  /** weekly: day of the week the week starts over (0 = Sunday). */
+  weekday?: number;
+  /** yearly: "MM-DD" each year; custom: "YYYY-MM-DD" (the first due date when repeating). */
+  due?: string;
+  /** custom only. */
+  repeat?: 'none' | 'monthly' | 'yearly';
+  /** Month the target was set up (for one-time "set aside" targets). */
+  start?: MonthKey;
 }
 
 export interface Category {

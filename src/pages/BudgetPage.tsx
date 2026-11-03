@@ -5,7 +5,7 @@ import MoneyInput from '../components/MoneyInput';
 import Modal from '../components/Modal';
 import MoveMoneyModal from '../components/MoveMoneyModal';
 import { CategoryQuickBudget, QuickBudgetModal } from '../components/QuickBudget';
-import { categoryMonth, computeBudget, targetStatus, underfundedAmount } from '../lib/budget';
+import { categoryMonth, categoryTargetStatus, computeBudget, underfundedAmount } from '../lib/budget';
 import { addDays, addMonths, currentMonth, monthLabel, today } from '../lib/dates';
 import { fmt } from '../lib/money';
 import { addCategory, addGroup, needsCategory, setAssigned } from '../lib/ops';
@@ -48,7 +48,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   const rta = summary.readyToAssign;
   const totalUnderfunded = data.categories
     .filter((c) => !c.hidden)
-    .reduce((s, c) => s + underfundedAmount(c, categoryMonth(summary, c.id), month), 0);
+    .reduce((s, c) => s + underfundedAmount(c, categoryMonth(summary, c.id), month, data), 0);
 
   const setMonth = (m: string) => go(`budget/${m}`);
 
@@ -154,7 +154,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                   </div>
                   {cats.map((c) => {
                     const cm = categoryMonth(summary, c.id);
-                    const ts = c.target ? targetStatus(c.target, cm, month) : null;
+                    const ts = categoryTargetStatus(data, c, cm, month);
                     // Red: cash overspending (comes out of next month). Yellow: only
                     // credit overspending (added to the card balance), or a target
                     // that still needs money.
@@ -296,7 +296,8 @@ function CategoryInspector({
   onAssign: (v: number) => void;
   inSheet?: boolean;
 }) {
-  const ts = category.target ? targetStatus(category.target, cm, month) : null;
+  const data = useData();
+  const ts = categoryTargetStatus(data, category, cm, month);
   return (
     <div className={inSheet ? 'inspector-sheet' : 'card'}>
       {!inSheet && <h3>{category.name}</h3>}
@@ -320,7 +321,8 @@ function CategoryInspector({
       </dl>
       {ts ? (
         <div className="target-box">
-          <b>Target:</b> {ts.description} {fmt(category.target!.amount)}
+          <b>Target: {fmt(category.target!.amount)}</b> · {ts.description}
+          {ts.needed > 0 && <div className="muted small">Needs {fmt(ts.needed)} this month</div>}
           <div className="target-bar wide">
             <span className={`target-fill ${ts.progress >= 1 ? 'done' : ''}`} style={{ width: `${Math.round(ts.progress * 100)}%` }} />
           </div>

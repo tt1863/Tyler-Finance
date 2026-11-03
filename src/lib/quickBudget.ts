@@ -1,4 +1,4 @@
-import { categoryMonth, computeBudget, targetStatus, type MonthSummary } from './budget';
+import { assignedBetween, categoryMonth, computeBudget, targetStatus, type MonthSummary } from './budget';
 import { addMonths } from './dates';
 import { setAssigned } from './ops';
 import type { BudgetData, Category, Cents, MonthKey } from './types';
@@ -35,13 +35,15 @@ export function quickAmount(
   category: Category,
   month: MonthKey,
   months: Map<MonthKey, MonthSummary>,
+  data?: BudgetData,
 ): Cents | null {
+  const prior = data ? (from: MonthKey) => assignedBetween(data, category.id, from, month) : undefined;
   const now = categoryMonth(months.get(month), category.id);
   const prev = [1, 2, 3].map((n) => months.get(addMonths(month, -n)));
   const avg = (f: (s: MonthSummary | undefined) => number) => Math.round(prev.reduce((t, s) => t + f(s), 0) / 3);
   switch (key) {
     case 'underfunded': {
-      const fromTarget = category.target ? targetStatus(category.target, now, month).underfunded : 0;
+      const fromTarget = category.target ? targetStatus(category.target, now, month, prior).underfunded : 0;
       const fromOverspend = now.available < 0 ? -now.available : 0;
       const add = Math.max(fromTarget, fromOverspend);
       return add > 0 ? now.assigned + add : null;
@@ -56,7 +58,7 @@ export function quickAmount(
       return avg((s) => spent(s, category.id));
     case 'reduceOverfunding': {
       if (!category.target) return null;
-      const t = targetStatus(category.target, now, month);
+      const t = targetStatus(category.target, now, month, prior);
       // For "balance" targets, overfunded means more available than the goal.
       const extra = category.target.type === 'balance' ? Math.max(0, now.available - category.target.amount) : Math.max(0, now.assigned - t.needed);
       return extra > 0 ? now.assigned - Math.min(extra, Math.max(0, now.assigned)) : null;
@@ -82,7 +84,7 @@ export function applyQuickBudget(data: BudgetData, month: MonthKey, key: QuickKe
   const targets = categoryId ? data.categories.filter((c) => c.id === categoryId) : monthWide(data, key);
   let d = data;
   for (const c of targets) {
-    const amount = quickAmount(key, c, month, months);
+    const amount = quickAmount(key, c, month, months, data);
     if (amount === null) continue;
     if (amount !== categoryMonth(months.get(month), c.id).assigned) d = setAssigned(d, month, c.id, amount);
   }
@@ -97,7 +99,7 @@ export function quickTotals(data: BudgetData, month: MonthKey): Record<QuickKey,
     let change = 0;
     let categories = 0;
     for (const c of monthWide(data, key)) {
-      const amount = quickAmount(key, c, month, months);
+      const amount = quickAmount(key, c, month, months, data);
       if (amount === null) continue;
       const diff = amount - categoryMonth(months.get(month), c.id).assigned;
       if (diff !== 0) {

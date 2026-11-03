@@ -208,24 +208,100 @@ export interface TargetStatus {
   description: string;
 }
 
-export function targetStatus(target: Target, cm: CategoryMonth, month: MonthKey): TargetStatus {
+/** Sum of a category's assigned amounts from `from` up to (not including) `to`. */
+export function assignedBetween(data: BudgetData, categoryId: string, from: MonthKey, to: MonthKey): Cents {
+  let sum = 0;
+  for (const [m, row] of Object.entries(data.assigned)) if (m >= from && m < to) sum += row[categoryId] ?? 0;
+  return sum;
+}
+
+/** How many times a weekday (0 = Sunday) falls in a month. */
+export function weekdaysInMonth(month: MonthKey, weekday: number): number {
+  const [y, m] = month.split('-').map(Number);
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  let count = 0;
+  for (let d = 0; d < days; d++) if ((first + d) % 7 === weekday) count++;
+  return count;
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDate = (mmdd: string) => `${MONTHS[Number(mmdd.slice(0, 2)) - 1]} ${Number(mmdd.slice(3, 5))}`;
+
+/** The next yearly due month on or after `month` for a "MM-DD" date. */
+function nextYearlyDue(month: MonthKey, mmdd: string): MonthKey {
+  const year = Number(month.slice(0, 4));
+  const thisYear = `${year}-${mmdd.slice(0, 2)}`;
+  return thisYear >= month ? thisYear : `${year + 1}-${mmdd.slice(0, 2)}`;
+}
+
+/**
+ * What a target asks for this month. `priorAssigned(from)` gives what was
+ * assigned to the category from a month up to this one; "set aside" targets
+ * that span several months use it so last month's assigning counts. Without
+ * it they fall back to the money left over.
+ */
+export function targetStatus(
+  target: Target,
+  cm: CategoryMonth,
+  month: MonthKey,
+  priorAssigned?: (from: MonthKey) => Cents,
+): TargetStatus {
+  const behavior = target.behavior ?? 'setAside';
+  // Spread what's still needed over the months left until a due month.
+  const spread = (dueMonth: MonthKey, cycleStart: MonthKey) => {
+    const monthsLeft = Math.max(1, monthDiff(month, dueMonth) + 1);
+    const have = behavior === 'refill' || !priorAssigned ? cm.carryIn : priorAssigned(cycleStart);
+    return Math.ceil(Math.max(0, target.amount - have) / monthsLeft);
+  };
   let needed = 0;
   let description = '';
   switch (target.type) {
+    case 'weekly': {
+      const weeks = weekdaysInMonth(month, target.weekday ?? 1);
+      const total = target.amount * weeks;
+      needed = behavior === 'refill' ? Math.max(0, total - cm.carryIn) : total;
+      description = `${behavior === 'refill' ? 'Refill up to' : 'Set aside'} each week (${weeks} ${WEEKDAYS[target.weekday ?? 1]}s this month)`;
+      break;
+    }
     case 'monthly':
-      needed = target.amount;
-      description = 'Assign each month';
+      needed = behavior === 'refill' ? Math.max(0, target.amount - cm.carryIn) : target.amount;
+      description = behavior === 'refill' ? 'Refill up to each month' : 'Set aside each month';
       break;
     case 'refill':
       needed = Math.max(0, target.amount - cm.carryIn);
       description = 'Refill up to each month';
       break;
+    case 'yearly': {
+      const mmdd = target.due ?? '12-31';
+      const dueMonth = nextYearlyDue(month, mmdd);
+      needed = spread(dueMonth, addMonthsKey(dueMonth, -11));
+      description = `${behavior === 'refill' ? 'Refill up to' : 'Set aside'} by ${shortDate(mmdd)} each year`;
+      break;
+    }
+    case 'custom': {
+      const due = target.due ?? `${month}-01`;
+      const repeat = target.repeat ?? 'none';
+      if (repeat === 'monthly') {
+        needed = behavior === 'refill' ? Math.max(0, target.amount - cm.carryIn) : target.amount;
+      } else if (repeat === 'yearly') {
+        const dueMonth = nextYearlyDue(month < due.slice(0, 7) ? due.slice(0, 7) : month, due.slice(5));
+        needed = spread(dueMonth, addMonthsKey(dueMonth, -11));
+      } else {
+        const dueMonth = due.slice(0, 7);
+        needed = month > dueMonth ? 0 : spread(dueMonth, target.start ?? month);
+      }
+      const when = repeat === 'none' ? `by ${shortDate(due.slice(5))}, ${due.slice(0, 4)}` : `by ${shortDate(due.slice(5))}, repeating ${repeat}`;
+      description = `${behavior === 'refill' ? 'Fill up to' : 'Set aside'} ${when}`;
+      break;
+    }
     case 'byDate': {
       const due = target.month ?? month;
       const monthsLeft = Math.max(1, monthDiff(month, due) + 1);
       const remaining = Math.max(0, target.amount - cm.carryIn);
       needed = Math.ceil(remaining / monthsLeft);
-      description = `Have by ${due}`;
+      description = `Have a balance by ${due}`;
       break;
     }
     case 'balance':
@@ -245,9 +321,22 @@ export function targetStatus(target: Target, cm: CategoryMonth, month: MonthKey)
   return { needed, underfunded, progress, description };
 }
 
+function addMonthsKey(month: MonthKey, n: number): MonthKey {
+  const [y, m] = month.split('-').map(Number);
+  const total = y * 12 + (m - 1) + n;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+}
+
+/** Target status with the category's assigning history filled in. */
+export function categoryTargetStatus(data: BudgetData, category: Category, cm: CategoryMonth, month: MonthKey): TargetStatus | null {
+  if (!category.target) return null;
+  return targetStatus(category.target, cm, month, (from) => assignedBetween(data, category.id, from, month));
+}
+
 /** What "Assign underfunded" would add for a category: target shortfall or overspending. */
-export function underfundedAmount(category: Category, cm: CategoryMonth, month: MonthKey): Cents {
-  const fromTarget = category.target ? targetStatus(category.target, cm, month).underfunded : 0;
+export function underfundedAmount(category: Category, cm: CategoryMonth, month: MonthKey, data?: BudgetData): Cents {
+  const ts = data ? categoryTargetStatus(data, category, cm, month) : category.target ? targetStatus(category.target, cm, month) : null;
+  const fromTarget = ts ? ts.underfunded : 0;
   const fromOverspend = cm.available < 0 ? -cm.available : 0;
   return Math.max(fromTarget, fromOverspend);
 }
