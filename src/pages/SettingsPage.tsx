@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
 import FlagsPanel from '../components/FlagsPanel';
 import SyncPanel from '../components/SyncPanel';
+import YnabImport from '../components/YnabImport';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
 import { demoData } from '../lib/demo';
@@ -22,7 +23,7 @@ function download(name: string, content: string, type: string) {
 
 const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
-export default function SettingsPage() {
+export default function SettingsPage({ section }: { section?: string }) {
   const data = useData();
   const update = useStore((s) => s.update);
   const replace = useStore((s) => s.replace);
@@ -77,6 +78,8 @@ export default function SettingsPage() {
       <h1>Settings & Data</h1>
 
       <SyncPanel />
+
+      <YnabImport autoOpen={section === 'ynab'} />
 
       <section className="card">
         <h3>Payees</h3>
