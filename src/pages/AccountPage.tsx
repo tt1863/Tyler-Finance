@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
 import { transactionCategoryLabel } from '../components/CategorySelect';
 import { FlagDot } from '../components/FlagPicker';
+import BulkBar from '../components/BulkBar';
 import ImportModal from '../components/ImportModal';
 import { flagMatches } from '../lib/flags';
 import ScheduledList from '../components/ScheduledList';
@@ -11,7 +12,7 @@ import TransactionForm from '../components/TransactionForm';
 import { accountBalances } from '../lib/budget';
 import { dateLabel } from '../lib/dates';
 import { fmt, parseMoney } from '../lib/money';
-import { deleteTransactions, needsCategory, reconcile, setCleared } from '../lib/ops';
+import { needsCategory, reconcile, setCleared } from '../lib/ops';
 import { useData, useStore } from '../lib/store';
 import type { Transaction } from '../lib/types';
 
@@ -134,18 +135,6 @@ export default function AccountPage({ accountId }: { accountId: string }) {
             </button>
           </>
         )}
-        {selected.size > 0 && (
-          <button
-            className="btn danger-outline"
-            onClick={() => {
-              if (!confirm(`Delete ${selected.size} transactions?`)) return;
-              update((d) => deleteTransactions(d, [...selected]));
-              setSelected(new Set());
-            }}
-          >
-            Delete {selected.size} selected
-          </button>
-        )}
         <span className="spacer" />
         <label className="checkbox inline small">
           <input type="checkbox" checked={onlyUncategorized} onChange={(e) => setOnlyUncategorized(e.target.checked)} />
@@ -159,7 +148,14 @@ export default function AccountPage({ accountId }: { accountId: string }) {
 
       <div className={`register ${isAll ? 'with-account' : ''}`}>
         <div className="reg-row head">
-          <span />
+          <span>
+            <input
+              type="checkbox"
+              aria-label="Select all shown"
+              checked={rows.length > 0 && rows.slice(0, limit).every((t) => selected.has(t.id))}
+              onChange={(e) => setSelected(e.target.checked ? new Set(rows.slice(0, limit).map((t) => t.id)) : new Set())}
+            />
+          </span>
           <span>Date</span>
           {isAll && <span>Account</span>}
           <span>Payee</span>
@@ -212,6 +208,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         )}
       </div>
 
+      {selected.size > 0 && <BulkBar selected={selected} onClear={() => setSelected(new Set())} />}
       {editing && (
         <TransactionForm
           transaction={editing === 'new' ? undefined : editing}
