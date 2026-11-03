@@ -80,6 +80,12 @@ export default function TransactionForm({
     setPayee(value);
     const remembered = data.payeeCategory[value];
     if (remembered && !categoryId) setCategoryId(remembered);
+    // Paying a loan: use its payment category.
+    if (value.startsWith(TRANSFER_PREFIX) && !categoryId) {
+      const target = data.accounts.find((a) => a.name === value.slice(TRANSFER_PREFIX.length).trim());
+      const loanCat = target && data.categories.find((c) => c.loanAccountId === target.id);
+      if (loanCat) setCategoryId(loanCat.id);
+    }
   };
 
   const save = (addAnother = false) => {

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { today } from '../lib/dates';
-import { parseMoney } from '../lib/money';
+import { LOAN_KINDS, addLoan, updateLoan } from '../lib/loans';
+import { parseMoney, toInput } from '../lib/money';
 import { addAccount, deleteAccount, isDebtType, updateAccount } from '../lib/ops';
 import { go } from '../lib/route';
 import { useData, useStore } from '../lib/store';
-import type { Account, AccountType } from '../lib/types';
+import type { Account, AccountType, LoanKind } from '../lib/types';
 import Modal from './Modal';
 
 const TYPES: { value: AccountType; label: string; onBudget: boolean }[] = [
@@ -12,7 +13,7 @@ const TYPES: { value: AccountType; label: string; onBudget: boolean }[] = [
   { value: 'savings', label: 'Savings', onBudget: true },
   { value: 'cash', label: 'Cash', onBudget: true },
   { value: 'credit', label: 'Credit Card', onBudget: true },
-  { value: 'loan', label: 'Loan / Mortgage', onBudget: false },
+  { value: 'loan', label: 'Loan (mortgage, auto, student…)', onBudget: false },
   { value: 'asset', label: 'Asset (investments, home, car)', onBudget: false },
   { value: 'liability', label: 'Other Liability', onBudget: false },
 ];
@@ -29,11 +30,32 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
   const [date, setDate] = useState(today());
   const [note, setNote] = useState(account?.note ?? '');
   const [error, setError] = useState('');
+  const [loanKind, setLoanKind] = useState<LoanKind>(account?.loan?.kind ?? 'mortgage');
+  const [apr, setApr] = useState(account?.debt ? String(account.debt.apr) : '');
+  const [payment, setPayment] = useState(account?.debt?.minPayment ? toInput(account.debt.minPayment) : '');
+  const [escrow, setEscrow] = useState(account?.loan?.escrow ? toInput(account.loan.escrow) : '');
+  const isLoan = (account?.type ?? type) === 'loan';
+
+  /** Loan fields, or an error message. */
+  const readLoan = () => {
+    const rate = apr.trim() === '' ? 0 : Number(apr.replace('%', ''));
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) return 'Enter the interest rate as a percent, e.g. 6.5.';
+    const pay = parseMoney(payment);
+    if (pay === null || pay < 0) return 'Enter the required monthly payment.';
+    const esc = loanKind === 'mortgage' && escrow.trim() ? parseMoney(escrow) : 0;
+    if (esc === null || esc < 0) return 'Enter a valid escrow amount.';
+    return { apr: rate, payment: Math.abs(pay), escrow: esc || undefined, kind: loanKind };
+  };
 
   const save = () => {
     if (!name.trim()) return setError('Give the account a name.');
     if (account) {
-      update((d) => updateAccount(d, account.id, { name: name.trim(), note }));
+      const loan = isLoan ? readLoan() : null;
+      if (typeof loan === 'string') return setError(loan);
+      update((d) => {
+        const next = updateAccount(d, account.id, { name: name.trim(), note });
+        return loan ? updateLoan(next, account.id, loan) : next;
+      });
       return onClose();
     }
     const amount = parseMoney(balance);
@@ -41,8 +63,12 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
     // Debts are entered as the amount owed and stored as a negative balance.
     const signed = isDebtType(type) ? -Math.abs(amount) : amount;
     let newId = '';
+    const loan = isLoan ? readLoan() : null;
+    if (typeof loan === 'string') return setError(loan);
     update((d) => {
-      const next = addAccount(d, { name, type, onBudget, balance: signed, date });
+      const next = loan
+        ? addLoan(d, { name, owed: Math.abs(amount), date, ...loan })
+        : addAccount(d, { name, type, onBudget, balance: signed, date });
       newId = next.accounts[next.accounts.length - 1].id;
       return next;
     });
@@ -121,13 +147,15 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
                 ))}
               </select>
             </label>
-            <label className="checkbox">
-              <input type="checkbox" checked={onBudget} onChange={(e) => setOnBudget(e.target.checked)} />
-              <span>
-                <b>Budget account</b> — money here is part of your budget. Uncheck for tracking accounts (investments,
-                loans) that only count toward net worth.
-              </span>
-            </label>
+            {!isLoan && (
+              <label className="checkbox">
+                <input type="checkbox" checked={onBudget} onChange={(e) => setOnBudget(e.target.checked)} />
+                <span>
+                  <b>Budget account</b> — money here is part of your budget. Uncheck for tracking accounts (investments,
+                  loans) that only count toward net worth.
+                </span>
+              </label>
+            )}
             <div className="row">
               <label>
                 {isDebtType(type) ? 'Amount owed' : 'Current balance'}
@@ -138,6 +166,44 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </label>
             </div>
+          </>
+        )}
+        {isLoan && (
+          <>
+            <label>
+              Loan type
+              <select value={loanKind} onChange={(e) => setLoanKind(e.target.value as LoanKind)}>
+                {LOAN_KINDS.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="row">
+              <label>
+                Interest rate (%)
+                <input inputMode="decimal" value={apr} onChange={(e) => setApr(e.target.value)} placeholder="6.5" />
+              </label>
+              <label>
+                Monthly payment
+                <input inputMode="decimal" value={payment} onChange={(e) => setPayment(e.target.value)} placeholder="0.00" />
+              </label>
+            </div>
+            {loanKind === 'mortgage' && (
+              <label>
+                Monthly escrow (optional)
+                <input inputMode="decimal" value={escrow} onChange={(e) => setEscrow(e.target.value)} placeholder="Taxes and insurance" />
+              </label>
+            )}
+            <p className="hint">
+              {account ? 'The' : 'A'} <b>{name.trim() || 'loan'} Payment</b> category {account ? 'targets' : 'will target'} the
+              payment{loanKind === 'mortgage' && escrow.trim() ? ' plus escrow' : ''} each month. To pay the loan, add a
+              transfer from checking to this account; interest is added at the end of each month.
+              {loanKind === 'mortgage' && escrow.trim() && (
+                <> Record the escrow part as a separate payment from checking in the same category, since it doesn't lower the balance.</>
+              )}
+            </p>
           </>
         )}
         {account && (

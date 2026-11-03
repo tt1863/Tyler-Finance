@@ -24,6 +24,18 @@ export interface Account {
   note?: string;
   /** For credit cards and loans: used by the debt payoff planner. */
   debt?: { apr: number; minPayment: Cents };
+  /** Loan details (loan accounts made with the loan form). */
+  loan?: LoanInfo;
+}
+
+export type LoanKind = 'mortgage' | 'auto' | 'student' | 'personal' | 'medical' | 'other';
+
+export interface LoanInfo {
+  kind: LoanKind;
+  /** Monthly escrow (taxes, insurance) paid with a mortgage; not part of the loan balance. */
+  escrow?: Cents;
+  /** Interest has been recorded through the end of this month. */
+  interestThrough: MonthKey;
 }
 
 export interface CategoryGroup {
@@ -74,6 +86,8 @@ export interface Category {
   target?: Target;
   /** Set on credit-card payment categories: the card this category pays. */
   ccAccountId?: string;
+  /** Set on a loan's payment category: the loan it pays. */
+  loanAccountId?: string;
 }
 
 /** One part of a split transaction. Amounts of all parts add up to the transaction amount. */
