@@ -5,6 +5,7 @@ import { startSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
 import DebtPage from './pages/DebtPage';
+import PayeesPage from './pages/PayeesPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
@@ -76,6 +77,7 @@ export default function App() {
   if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} key={arg ?? 'all'} />;
   else if (page === 'reports') content = <ReportsPage />;
   else if (page === 'debt') content = <DebtPage />;
+  else if (page === 'payees') content = <PayeesPage />;
   else if (page === 'settings') content = <SettingsPage />;
   else content = <BudgetPage month={arg} />;
 
