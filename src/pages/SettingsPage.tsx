@@ -5,23 +5,13 @@ import SyncPanel from '../components/SyncPanel';
 import YnabImport from '../components/YnabImport';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
+import { csvCell, download } from '../lib/download';
 import { demoData } from '../lib/demo';
 import { setCurrency } from '../lib/money';
 import { useData, useStore } from '../lib/store';
 import type { BudgetData } from '../lib/types';
 
 const CURRENCIES = ['USD', 'CAD', 'EUR', 'GBP', 'AUD', 'NZD', 'JPY', 'MXN', 'INR', 'CHF', 'SEK'];
-
-function download(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
 export default function SettingsPage({ section }: { section?: string }) {
   const data = useData();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addAccount, addCategory, addGroup, emptyData, saveTransaction } from './ops';
-import { spendingTrend } from './reports';
+import { toCsv } from './download';
+import { linesTable, spendingBreakdown, spendingTrend } from './reports';
 import { READY_TO_ASSIGN } from './types';
 
 function setup() {
@@ -40,5 +41,32 @@ describe('spending trend', () => {
     const { d, fun, rent } = setup();
     expect(spendingTrend(d, ['2026-09', '2026-10'], { kind: 'group', id: fun }).values).toEqual([0, 5000]);
     expect(spendingTrend(d, ['2026-09', '2026-10'], { kind: 'category', id: rent }).values).toEqual([100000, 100000]);
+  });
+});
+
+describe('spending breakdown and export', () => {
+  it('groups spending with the transactions behind each number', () => {
+    const { d } = setup();
+    const rows = spendingBreakdown(d, ['2026-10'], false);
+    expect(rows.map((r) => [r.name, r.value, r.lines.length])).toEqual([
+      ['Rent', 100000, 1],
+      ['Games', 5000, 2],
+    ]);
+    const groups = spendingBreakdown(d, ['2026-09', '2026-10'], true);
+    expect(groups.map((r) => [r.name, r.value])).toEqual([
+      ['Bills', 200000],
+      ['Fun', 5000],
+    ]);
+  });
+
+  it('exports transactions as CSV', () => {
+    const { d } = setup();
+    const lines = spendingBreakdown(d, ['2026-10'], false).find((r) => r.name === 'Games')!.lines;
+    expect(toCsv(linesTable(d, lines))).toBe(
+      'Date,Account,Payee,Category Group,Category,Memo,Spent\n' +
+        '2026-10-06,Visa,P,Fun,Games,,-10.00\n' +
+        '2026-10-05,Visa,P,Fun,Games,,60.00\n',
+    );
+    expect(toCsv([['a, b', 'say "hi"']])).toBe('"a, b","say ""hi"""\n');
   });
 });
