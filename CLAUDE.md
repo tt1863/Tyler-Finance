@@ -33,6 +33,10 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
   approves. Rule logic is shared app/server in `supabase/functions/_shared/payeeRules.ts`;
   app actions in `src/lib/review.ts`. Rules sync as `rule` records.
 
+- Offline: `build/serviceWorker.ts` (Vite plugin) writes `dist/sw.js`, which saves every file
+  of the build (cache per scope + build hash); `src/lib/updates.ts` registers it and shows the
+  "new version" bar. Cache lookups must use `ignoreVary` (module scripts send `Origin`).
+
 ## Phone layout rules
 
 - Text fields must be at least 16px on phones, or iOS Safari zooms in on tap and stays zoomed.

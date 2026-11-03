@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { serviceWorker } from './build/serviceWorker';
 
 // Relative base so the build works on GitHub Pages or any static host.
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), serviceWorker()],
 });

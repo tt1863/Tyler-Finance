@@ -128,6 +128,9 @@ export function demoData(): BudgetData {
     { date: todayStr(), payee: 'AMZN Mktp US*2K4LX9', memo: '', amount: -2399 },
   ]).data;
 
+  // Interest rates and minimum payments for the debt payoff planner.
+  d = { ...d, accounts: d.accounts.map((a) => (a.id === visa ? { ...a, debt: { apr: 22.99, minPayment: 3500 } } : a.name === 'Car Loan' ? { ...a, debt: { apr: 6.5, minPayment: 32000 } } : a)) };
+
   // Recurring bills and income, starting from their next date.
   const next = (day: number) => {
     const thisMonth = `${now}-${String(day).padStart(2, '0')}`;

@@ -9,6 +9,9 @@ them, and move money around when plans change.
 - **Budget** — monthly view with Assigned / Activity / Available per category,
   a "Ready to Assign" total, category groups, hide/reorder, month-to-month
   rollover, and overspending that comes out of next month's Ready to Assign.
+- **Quick budget** — one tap to assign what targets need, last month's
+  assigned or spent, 3-month averages, reduce overfunding, or reset available to
+  $0; for one category (tap its name on a phone) or the whole month.
 - **Move money** — tap any Available amount to move money or cover overspending.
 - **Targets** — "assign each month", "refill up to", "have a balance by a date",
   and "have a balance of", with progress bars and one-click **Assign Underfunded**.
@@ -25,6 +28,9 @@ them, and move money around when plans change.
   each account with Enter now / Skip. Future-dated transactions wait until their date.
 - **Split transactions** — divide one purchase across several categories (tap
   "Split" next to Category), each part with its own memo.
+- **Debt payoff planner** — add each card's or loan's interest rate and minimum
+  payment, then see your debt-free date, total interest, and how an extra
+  monthly payment (avalanche or snowball) gets you there sooner.
 - **Reconcile** — match the cleared balance to your bank and lock it in.
 - **CSV import** from your bank, with duplicate detection.
 - **Reports** — spending by category/group, income vs spending, net worth.
@@ -34,6 +40,8 @@ them, and move money around when plans change.
 - **Linked banks** (Plaid) — link bank and card accounts in Settings; new
   transactions import automatically, pending charges update when they post,
   and hand-entered transactions are matched instead of duplicated.
+- **Works offline** — the app saves itself on the device, opens instantly and
+  works without signal; a "new version is ready" bar offers updates.
 - **Data** — saved in your browser; export/restore JSON backups, export CSV, undo
   (Ctrl/Cmd+Z), dark mode, and a phone-friendly layout.
 

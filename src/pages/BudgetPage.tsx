@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CategoryModal from '../components/CategoryModal';
 import GroupModal from '../components/GroupModal';
 import MoneyInput from '../components/MoneyInput';
+import Modal from '../components/Modal';
 import MoveMoneyModal from '../components/MoveMoneyModal';
+import { CategoryQuickBudget, QuickBudgetModal } from '../components/QuickBudget';
 import { categoryMonth, computeBudget, targetStatus, underfundedAmount } from '../lib/budget';
 import { addDays, addMonths, currentMonth, monthLabel, today } from '../lib/dates';
 import { fmt } from '../lib/money';
-import { addCategory, addGroup, assignLastMonth, assignUnderfunded, needsCategory, setAssigned } from '../lib/ops';
+import { addCategory, addGroup, needsCategory, setAssigned } from '../lib/ops';
 import { go } from '../lib/route';
 import { upcoming } from '../lib/scheduled';
 import { findTransferPairs } from '../lib/transfers';
@@ -23,6 +25,11 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   const [editingGroup, setEditingGroup] = useState<CategoryGroup | null>(null);
   const [moving, setMoving] = useState<{ categoryId: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
+  // On phones the details panel sits below the whole budget, so tapping a
+  // category's name opens its details as a sheet instead.
+  const isPhone = useIsPhone();
+  const [sheet, setSheet] = useState<string | null>(null);
   const uncategorized = useMemo(() => needsCategory(data).length, [data]);
   const possibleTransfers = useMemo(() => findTransferPairs(data).length, [data]);
   const toReview = useMemo(() => data.transactions.filter((t) => t.approved === false).length, [data.transactions]);
@@ -56,6 +63,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   };
 
   const selectedCat = selected ? data.categories.find((c) => c.id === selected) : undefined;
+  const sheetCat = sheet ? data.categories.find((c) => c.id === sheet) : undefined;
 
   return (
     <div className="budget-page">
@@ -106,16 +114,8 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         <button className="btn" onClick={newGroup}>
           + Category Group
         </button>
-        <button
-          className="btn"
-          disabled={totalUnderfunded === 0}
-          onClick={() => update((d) => assignUnderfunded(d, month))}
-          title="Assign enough to meet every target and cover overspending"
-        >
-          Assign Underfunded {totalUnderfunded > 0 && `(${fmt(totalUnderfunded)})`}
-        </button>
-        <button className="btn" onClick={() => update((d) => assignLastMonth(d, month, addMonths(month, -1)))}>
-          Assigned Last Month
+        <button className="btn" onClick={() => setQuickOpen(true)}>
+          ⚡ Quick budget
         </button>
         <label className="checkbox inline small">
           <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} /> Show hidden
@@ -171,7 +171,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                         onClick={() => setSelected(c.id)}
                       >
                         <span className="cat-name">
-                          <button className="link-btn" onClick={() => setEditingCat(c)}>
+                          <button className="link-btn" onClick={() => (isPhone ? setSheet(c.id) : setEditingCat(c))}>
                             {c.name}
                           </button>
                           {ts && (
@@ -251,6 +251,23 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         </aside>
       </div>
 
+      {quickOpen && <QuickBudgetModal month={month} onClose={() => setQuickOpen(false)} />}
+      {sheetCat && (
+        <Modal title={sheetCat.name} onClose={() => setSheet(null)}>
+          <CategoryInspector
+            category={sheetCat}
+            month={month}
+            cm={categoryMonth(summary, sheetCat.id)}
+            upcomingAmount={upcomingByCat[sheetCat.id] ?? 0}
+            onEdit={() => {
+              setSheet(null);
+              setEditingCat(sheetCat);
+            }}
+            onAssign={(v) => update((d) => setAssigned(d, month, sheetCat.id, v))}
+            inSheet
+          />
+        </Modal>
+      )}
       {editingCat && <CategoryModal category={editingCat} month={month} onClose={() => setEditingCat(null)} />}
       {editingGroup && <GroupModal group={editingGroup} onClose={() => setEditingGroup(null)} />}
       {moving && <MoveMoneyModal categoryId={moving.categoryId} month={month} summary={summary} onClose={() => setMoving(null)} />}
@@ -265,6 +282,7 @@ function CategoryInspector({
   onEdit,
   onAssign,
   upcomingAmount,
+  inSheet = false,
 }: {
   category: Category;
   month: string;
@@ -272,11 +290,12 @@ function CategoryInspector({
   upcomingAmount: number;
   onEdit: () => void;
   onAssign: (v: number) => void;
+  inSheet?: boolean;
 }) {
   const ts = category.target ? targetStatus(category.target, cm, month) : null;
   return (
-    <div className="card">
-      <h3>{category.name}</h3>
+    <div className={inSheet ? 'inspector-sheet' : 'card'}>
+      {!inSheet && <h3>{category.name}</h3>}
       <dl className="stats">
         <dt>Left over from last month</dt>
         <dd>{fmt(cm.carryIn)}</dd>
@@ -318,9 +337,22 @@ function CategoryInspector({
         </button>
       )}
       {category.note && <p className="note">{category.note}</p>}
+      <CategoryQuickBudget category={category} month={month} />
       <button className="btn small" onClick={onEdit}>
         Edit category & target
       </button>
     </div>
   );
+}
+
+function useIsPhone() {
+  const query = '(max-width: 760px)';
+  const [phone, setPhone] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return phone;
 }

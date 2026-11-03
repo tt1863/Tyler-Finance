@@ -22,6 +22,8 @@ export interface Account {
   onBudget: boolean;
   closed: boolean;
   note?: string;
+  /** For credit cards and loans: used by the debt payoff planner. */
+  debt?: { apr: number; minPayment: Cents };
 }
 
 export interface CategoryGroup {

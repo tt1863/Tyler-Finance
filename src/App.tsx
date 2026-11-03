@@ -6,11 +6,13 @@ import { pendingOAuth } from './lib/bank/plaidLink';
 import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
+import DebtPage from './pages/DebtPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
 import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
+import { applyUpdate, useUpdate } from './lib/updates';
 import { go, useRoute } from './lib/route';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
@@ -20,6 +22,7 @@ export default function App() {
   const undo = useStore((s) => s.undo);
   const route = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
+  const updateReady = useUpdate((s) => s.ready);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
 
@@ -90,6 +93,7 @@ export default function App() {
   let content;
   if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} key={arg ?? 'all'} />;
   else if (page === 'reports') content = <ReportsPage />;
+  else if (page === 'debt') content = <DebtPage />;
   else if (page === 'settings') content = <SettingsPage />;
   else content = <BudgetPage month={arg} />;
 
@@ -107,6 +111,14 @@ export default function App() {
       </header>
       <Sidebar open={menuOpen} current={page} currentArg={arg} onClose={() => setMenuOpen(false)} />
       <main className="main">{content}</main>
+      {updateReady && (
+        <div className="update-bar" role="status">
+          <span>A new version is ready.</span>
+          <button className="btn primary small" onClick={applyUpdate}>
+            Update
+          </button>
+        </div>
+      )}
       <ChooseBudgetModal />
     </div>
   );
