@@ -68,7 +68,7 @@ function ensureCcGroup(data: BudgetData): string {
 
 export function addAccount(
   data: BudgetData,
-  input: { name: string; type: AccountType; onBudget: boolean; balance: Cents; date?: string },
+  input: { name: string; type: AccountType; onBudget: boolean; balance: Cents; date?: string; creditLine?: boolean },
 ): BudgetData {
   const d = structuredClone(data);
   const account: Account = {
@@ -77,6 +77,7 @@ export function addAccount(
     type: input.type,
     onBudget: input.onBudget,
     closed: false,
+    ...(input.creditLine && input.type === 'credit' ? { creditLine: true } : {}),
   };
   d.accounts.push(account);
   if (account.type === 'credit' && account.onBudget) {

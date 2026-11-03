@@ -24,6 +24,8 @@ export interface Account {
   note?: string;
   /** For credit cards and loans: used by the debt payoff planner. */
   debt?: { apr: number; minPayment: Cents };
+  /** A line of credit: budgets exactly like a credit card (type 'credit'). */
+  creditLine?: boolean;
   /** Loan details (loan accounts made with the loan form). */
   loan?: LoanInfo;
 }

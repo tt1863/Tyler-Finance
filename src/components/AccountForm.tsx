@@ -8,23 +8,28 @@ import { useData, useStore } from '../lib/store';
 import type { Account, AccountType, LoanKind } from '../lib/types';
 import Modal from './Modal';
 
-const TYPES: { value: AccountType; label: string; onBudget: boolean }[] = [
-  { value: 'checking', label: 'Checking', onBudget: true },
-  { value: 'savings', label: 'Savings', onBudget: true },
-  { value: 'cash', label: 'Cash', onBudget: true },
-  { value: 'credit', label: 'Credit Card', onBudget: true },
-  { value: 'loan', label: 'Loan (mortgage, auto, student…)', onBudget: false },
-  { value: 'asset', label: 'Asset (investments, home, car)', onBudget: false },
-  { value: 'liability', label: 'Other Liability', onBudget: false },
+/** Choices in the Type menu. A line of credit is a credit account (it budgets like a card). */
+const TYPES: { value: string; type: AccountType; label: string; onBudget: boolean; creditLine?: boolean }[] = [
+  { value: 'checking', type: 'checking', label: 'Checking', onBudget: true },
+  { value: 'savings', type: 'savings', label: 'Savings', onBudget: true },
+  { value: 'cash', type: 'cash', label: 'Cash', onBudget: true },
+  { value: 'credit', type: 'credit', label: 'Credit Card', onBudget: true },
+  { value: 'loc', type: 'credit', label: 'Line of Credit', onBudget: true, creditLine: true },
+  { value: 'loan', type: 'loan', label: 'Loan (mortgage, auto, student…)', onBudget: false },
+  { value: 'asset', type: 'asset', label: 'Asset (investments, home, car)', onBudget: false },
+  { value: 'liability', type: 'liability', label: 'Other Liability', onBudget: false },
 ];
 
-export const accountTypeLabel = (t: AccountType) => TYPES.find((x) => x.value === t)?.label ?? t;
+export const accountTypeLabel = (a: Pick<Account, 'type' | 'creditLine'>) =>
+  a.creditLine ? 'Line of Credit' : (TYPES.find((x) => x.value === a.type)?.label ?? a.type);
 
 export default function AccountForm({ account, onClose }: { account?: Account; onClose: () => void }) {
   const data = useData();
   const update = useStore((s) => s.update);
   const [name, setName] = useState(account?.name ?? '');
-  const [type, setType] = useState<AccountType>(account?.type ?? 'checking');
+  const [choice, setChoice] = useState(account ? (account.creditLine ? 'loc' : account.type) : 'checking');
+  const picked = TYPES.find((x) => x.value === choice)!;
+  const type: AccountType = account?.type ?? picked.type;
   const [onBudget, setOnBudget] = useState(account?.onBudget ?? true);
   const [balance, setBalance] = useState('');
   const [date, setDate] = useState(today());
@@ -68,7 +73,7 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
     update((d) => {
       const next = loan
         ? addLoan(d, { name, owed: Math.abs(amount), date, ...loan })
-        : addAccount(d, { name, type, onBudget, balance: signed, date });
+        : addAccount(d, { name, type, onBudget, balance: signed, date, creditLine: picked.creditLine });
       newId = next.accounts[next.accounts.length - 1].id;
       return next;
     });
@@ -133,11 +138,10 @@ export default function AccountForm({ account, onClose }: { account?: Account; o
             <label>
               Type
               <select
-                value={type}
+                value={choice}
                 onChange={(e) => {
-                  const t = e.target.value as AccountType;
-                  setType(t);
-                  setOnBudget(TYPES.find((x) => x.value === t)!.onBudget);
+                  setChoice(e.target.value);
+                  setOnBudget(TYPES.find((x) => x.value === e.target.value)!.onBudget);
                 }}
               >
                 {TYPES.map((t) => (

@@ -94,7 +94,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
           </h1>
           {account && (
             <p className="muted small">
-              {accountTypeLabel(account.type)} · {account.onBudget ? 'Budget account' : 'Tracking account'}
+              {accountTypeLabel(account)} · {account.onBudget ? 'Budget account' : 'Tracking account'}
               {account.closed && ' · Closed'}
             </p>
           )}
