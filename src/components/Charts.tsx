@@ -31,7 +31,18 @@ const H = 260;
 const PAD = { top: 12, right: 12, bottom: 28, left: 48 };
 
 /** Grouped vertical bars with a per-group hover tooltip. */
-export function GroupedBarChart({ labels, series }: { labels: string[]; series: Series[] }) {
+export function GroupedBarChart({
+  labels,
+  series,
+  selected,
+  onSelect,
+}: {
+  labels: string[];
+  series: Series[];
+  /** Highlighted bar group (e.g. the month being shown below the chart). */
+  selected?: number | null;
+  onSelect?: (i: number) => void;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const ticks = ticksFor(Math.max(0, ...series.flatMap((s) => s.values)));
   const max = ticks[ticks.length - 1];
@@ -59,8 +70,8 @@ export function GroupedBarChart({ labels, series }: { labels: string[]; series: 
             const cx = PAD.left + groupW * i + groupW / 2;
             const totalW = series.length * barW + (series.length - 1) * gap;
             return (
-              <g key={label}>
-                {hover === i && <rect className="hover-band" x={PAD.left + groupW * i} y={PAD.top} width={groupW} height={innerH} />}
+              <g key={i}>
+                {(hover === i || selected === i) && <rect className="hover-band" x={PAD.left + groupW * i} y={PAD.top} width={groupW} height={innerH} />}
                 {series.map((s, si) => {
                   const v = s.values[i] ?? 0;
                   const x = cx - totalW / 2 + si * (barW + gap);
@@ -75,14 +86,17 @@ export function GroupedBarChart({ labels, series }: { labels: string[]; series: 
                   {label}
                 </text>
                 <rect
-                  className="hit"
+                  className={onSelect ? 'hit tappable' : 'hit'}
                   x={PAD.left + groupW * i}
                   y={PAD.top}
                   width={groupW}
                   height={innerH + PAD.bottom}
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover(null)}
-                  onClick={() => setHover(i)}
+                  onClick={() => {
+                    setHover(i);
+                    onSelect?.(i);
+                  }}
                 />
               </g>
             );
@@ -106,7 +120,20 @@ export function GroupedBarChart({ labels, series }: { labels: string[]; series: 
 }
 
 /** Single-series line chart with a crosshair tooltip. Handles negative values. */
-export function LineChart({ labels, values, name, color }: { labels: string[]; values: number[]; name: string; color: string }) {
+export function LineChart({
+  labels,
+  values,
+  name,
+  color,
+  format = fmt,
+}: {
+  labels: string[];
+  values: number[];
+  name: string;
+  color: string;
+  /** Tooltip value format (default: money). */
+  format?: (v: number) => string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const upper = ticksFor(Math.max(0, ...values));
   const lower = Math.min(0, ...values) < 0 ? ticksFor(-Math.min(...values)).map((t) => -t) : [0];
@@ -163,7 +190,7 @@ export function LineChart({ labels, values, name, color }: { labels: string[]; v
           <Tooltip x={(x(hover) / W) * 100} title={labels[hover]}>
             <div className="tt-row">
               <span>{name}</span>
-              <b>{fmt(values[hover])}</b>
+              <b>{format(values[hover])}</b>
             </div>
           </Tooltip>
         )}

@@ -7,6 +7,7 @@ import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
 import DebtPage from './pages/DebtPage';
+import PayeesPage from './pages/PayeesPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Welcome from './pages/Welcome';
@@ -14,6 +15,7 @@ import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
 import { applyUpdate, useUpdate } from './lib/updates';
 import { go, useRoute } from './lib/route';
+import { postLoanInterest } from './lib/loans';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
 
@@ -54,6 +56,11 @@ export default function App() {
       if (current && processDue(current, today()).entered > 0) {
         useStore.getState().update((d) => processDue(d, today()).data);
       }
+      // Record last month's loan interest once the month is over.
+      const latest = useStore.getState().data;
+      if (latest && postLoanInterest(latest, today()).data !== latest) {
+        useStore.getState().update((d) => postLoanInterest(d, today()).data);
+      }
     };
     run();
     const onVisible = () => document.visibilityState === 'visible' && run();
@@ -91,10 +98,11 @@ export default function App() {
 
   const [page = 'budget', arg] = route;
   let content;
-  if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} key={arg ?? 'all'} />;
-  else if (page === 'reports') content = <ReportsPage />;
+  if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} mode={route[2]} key={route.slice(1).join('/')} />;
+  else if (page === 'reports') content = <ReportsPage key={arg ?? ''} initialTab={arg} />;
   else if (page === 'debt') content = <DebtPage />;
-  else if (page === 'settings') content = <SettingsPage />;
+  else if (page === 'payees') content = <PayeesPage />;
+  else if (page === 'settings') content = <SettingsPage section={arg} />;
   else content = <BudgetPage month={arg} />;
 
   return (

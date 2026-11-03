@@ -5,9 +5,10 @@ import { deleteTransactions, saveTransaction } from '../lib/ops';
 import { saveRule, suggestMatch } from '../lib/review';
 import { deleteScheduled, FREQUENCIES, nextDate, processDue, saveScheduled } from '../lib/scheduled';
 import { useData, useStore } from '../lib/store';
-import type { BudgetData, Frequency, Scheduled, Split, Transaction } from '../lib/types';
+import type { BudgetData, FlagColor, Frequency, Scheduled, Split, Transaction } from '../lib/types';
 import { READY_TO_ASSIGN } from '../lib/types';
 import CategorySelect from './CategorySelect';
+import FlagPicker from './FlagPicker';
 import Modal from './Modal';
 
 const TRANSFER_PREFIX = 'Transfer : ';
@@ -52,6 +53,7 @@ export default function TransactionForm({
   const bankPayee = tx?.bankPayee;
   const [makeRule, setMakeRule] = useState(false);
   const [ruleMatch, setRuleMatch] = useState(bankPayee ? suggestMatch(bankPayee) : '');
+  const [flag, setFlagValue] = useState<FlagColor | null>(tx?.flag ?? null);
   // Split parts as entered: amounts are in the same direction as the total
   // (a leading "-" means the opposite, e.g. a return inside a purchase).
   const sign = direction === 'out' ? -1 : 1;
@@ -83,6 +85,12 @@ export default function TransactionForm({
     setPayee(value);
     const remembered = data.payeeCategory[value];
     if (remembered && !categoryId) setCategoryId(remembered);
+    // Paying a loan: use its payment category.
+    if (value.startsWith(TRANSFER_PREFIX) && !categoryId) {
+      const target = data.accounts.find((a) => a.name === value.slice(TRANSFER_PREFIX.length).trim());
+      const loanCat = target && data.categories.find((c) => c.loanAccountId === target.id);
+      if (loanCat) setCategoryId(loanCat.id);
+    }
   };
 
   const save = (addAnother = false) => {
@@ -138,6 +146,7 @@ export default function TransactionForm({
         cleared,
         transferAccountId: transferTarget?.id,
         splits: splitParts,
+        flag: flag ?? undefined,
       }),
     );
     if (makeRule && ruleMatch.trim() && !transferTarget) {
@@ -346,6 +355,12 @@ export default function TransactionForm({
               </span>
             </label>
             {makeRule && <input aria-label="Bank text to match" value={ruleMatch} onChange={(e) => setRuleMatch(e.target.value)} />}
+          </div>
+        )}
+        {!scheduled && (
+          <div className="field">
+            <span className="field-label">Flag</span>
+            <FlagPicker data={data} value={flag} onChange={setFlagValue} />
           </div>
         )}
         {!scheduled && <label className="checkbox">

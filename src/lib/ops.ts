@@ -2,7 +2,9 @@ import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
 import { applyRules } from '../../supabase/functions/_shared/payeeRules';
 import { uid } from './id';
+import { templateById } from './templates';
 import type {
+  FlagColor,
   Split,
   Account,
   AccountType,
@@ -28,30 +30,48 @@ export function emptyData(): BudgetData {
     assigned: {},
     payeeCategory: {},
     payeeRules: [],
+    flagNames: {},
     currency: 'USD',
   };
 }
 
 /** Fill in fields added after a budget was first saved. */
 export function normalize(data: BudgetData): BudgetData {
-  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [], payeeRules: data.payeeRules ?? [] };
+  return {
+    ...emptyData(),
+    ...data,
+    scheduled: data.scheduled ?? [],
+    payeeRules: data.payeeRules ?? [],
+    flagNames: data.flagNames ?? {},
+  };
 }
 
-/** A starter set of categories similar to YNAB's defaults. */
-export function starterData(): BudgetData {
-  const data = emptyData();
-  const groups: Record<string, string[]> = {
-    Bills: ['Rent/Mortgage', 'Electric', 'Water', 'Internet', 'Phone', 'Insurance'],
-    Needs: ['Groceries', 'Transportation', 'Medical'],
-    Wants: ['Dining Out', 'Entertainment', 'Shopping', 'Vacation'],
-    Savings: ['Emergency Fund', 'Car Replacement'],
-  };
-  for (const [name, cats] of Object.entries(groups)) {
-    const g = { id: uid(), name, hidden: false };
-    data.groups.push(g);
-    for (const c of cats) data.categories.push({ id: uid(), groupId: g.id, name: c, hidden: false });
+/** A new budget with a template's categories (default: the standard set). */
+export function starterData(templateId = 'standard'): BudgetData {
+  return addTemplateGroups(emptyData(), templateId);
+}
+
+/**
+ * Add a template's groups and categories. Groups that already exist (same
+ * name) get only the categories they're missing. `only` limits it to some groups.
+ */
+export function addTemplateGroups(data: BudgetData, templateId: string, only?: string[]): BudgetData {
+  const d = structuredClone(data);
+  const norm = (s: string) => s.trim().toLowerCase();
+  for (const [name, cats] of Object.entries(templateById(templateId).groups)) {
+    if (only && !only.includes(name)) continue;
+    let g = d.groups.find((x) => !x.system && norm(x.name) === norm(name));
+    if (!g) {
+      g = { id: uid(), name, hidden: false };
+      d.groups.push(g);
+    }
+    const groupId = g.id;
+    for (const c of cats) {
+      if (d.categories.some((x) => x.groupId === groupId && norm(x.name) === norm(c))) continue;
+      d.categories.push({ id: uid(), groupId, name: c, hidden: false });
+    }
   }
-  return data;
+  return d;
 }
 
 export const isCashType = (t: AccountType) => t === 'checking' || t === 'savings' || t === 'cash';
@@ -68,7 +88,7 @@ function ensureCcGroup(data: BudgetData): string {
 
 export function addAccount(
   data: BudgetData,
-  input: { name: string; type: AccountType; onBudget: boolean; balance: Cents; date?: string },
+  input: { name: string; type: AccountType; onBudget: boolean; balance: Cents; date?: string; creditLine?: boolean },
 ): BudgetData {
   const d = structuredClone(data);
   const account: Account = {
@@ -77,6 +97,7 @@ export function addAccount(
     type: input.type,
     onBudget: input.onBudget,
     closed: false,
+    ...(input.creditLine && input.type === 'credit' ? { creditLine: true } : {}),
   };
   d.accounts.push(account);
   if (account.type === 'credit' && account.onBudget) {
@@ -112,6 +133,9 @@ export function updateAccount(data: BudgetData, id: string, patch: Partial<Accou
   const payCat = d.categories.find((c) => c.ccAccountId === id);
   if (payCat && patch.name) payCat.name = patch.name;
   if (payCat && patch.closed !== undefined) payCat.hidden = patch.closed;
+  const loanCat = d.categories.find((c) => c.loanAccountId === id);
+  if (loanCat && patch.name) loanCat.name = `${patch.name} Payment`;
+  if (loanCat && patch.closed !== undefined) loanCat.hidden = patch.closed;
   return d;
 }
 
@@ -125,6 +149,8 @@ export function deleteAccount(data: BudgetData, id: string): BudgetData {
   d.scheduled = d.scheduled.filter((s) => s.accountId !== id && s.transferAccountId !== id);
   const payCat = d.categories.find((c) => c.ccAccountId === id);
   if (payCat) d = removeCategoryRefs(d, payCat.id, null);
+  // A loan's payment category stays (it may hold money), just unlinked.
+  for (const c of d.categories) if (c.loanAccountId === id) delete c.loanAccountId;
   return d;
 }
 
@@ -141,6 +167,7 @@ export interface TransactionDraft {
   transferAccountId?: string;
   /** Split across categories. Ignored for transfers. */
   splits?: Split[];
+  flag?: FlagColor;
 }
 
 /**
@@ -166,11 +193,13 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     memo: draft.memo.trim(),
     amount: draft.amount,
     cleared: draft.cleared,
+    ...(draft.flag ? { flag: draft.flag } : {}),
   };
   // Keep the link to the bank transaction so later bank updates find it.
   // (Saving also counts as reviewing it, so it's no longer marked unapproved.)
   if (existing?.bankId) tx.bankId = existing.bankId;
   if (existing?.bankPayee) tx.bankPayee = existing.bankPayee;
+  if (existing?.importId) tx.importId = existing.importId;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
     const from = accounts.get(draft.accountId);
@@ -266,7 +295,7 @@ export function assignUnderfunded(data: BudgetData, month: MonthKey, onlyIds?: s
   for (const c of data.categories) {
     if (c.hidden || (onlyIds && !onlyIds.includes(c.id))) continue;
     const cm = categoryMonth(summary, c.id);
-    const add = underfundedAmount(c, cm, month);
+    const add = underfundedAmount(c, cm, month, data);
     if (add > 0) d = setAssigned(d, month, c.id, cm.assigned + add);
   }
   return d;
@@ -310,6 +339,17 @@ export function updateCategory(data: BudgetData, id: string, patch: Partial<Cate
     ...data,
     categories: data.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
   };
+}
+
+/**
+ * Snooze a category's target for one month (or wake it with null). Like YNAB,
+ * not available for credit card payment categories.
+ */
+export function snoozeTarget(data: BudgetData, categoryId: string, month: MonthKey | null): BudgetData {
+  const c = data.categories.find((x) => x.id === categoryId);
+  if (!c?.target || c.ccAccountId) return data;
+  const { snoozed: _old, ...rest } = c.target;
+  return updateCategory(data, categoryId, { target: month ? { ...rest, snoozed: month } : rest });
 }
 
 /** Delete a category, moving its transactions and assigned money to another category. */
@@ -381,6 +421,8 @@ export interface ImportRow {
   payee: string;
   memo: string;
   amount: Cents;
+  /** The bank's own ID for the transaction (OFX/QFX FITID), when the file has one. */
+  importId?: string;
 }
 
 /**
@@ -403,9 +445,16 @@ export function importTransactions(
     const k = key(t.date, t.amount, t.bankPayee ?? t.payee);
     seen.set(k, (seen.get(k) ?? 0) + 1);
   }
+  const seenIds = new Set(
+    d.transactions.filter((t) => t.accountId === accountId && t.importId).map((t) => t.importId!),
+  );
   let added = 0;
   let skipped = 0;
   for (const r of rows) {
+    if (r.importId && seenIds.has(r.importId)) {
+      skipped++;
+      continue;
+    }
     const k = key(r.date, r.amount, r.payee);
     const count = seen.get(k) ?? 0;
     if (count > 0) {
@@ -425,7 +474,9 @@ export function importTransactions(
       cleared: 'cleared',
       bankPayee: r.payee,
       approved: false,
+      ...(r.importId ? { importId: r.importId } : {}),
     });
+    if (r.importId) seenIds.add(r.importId);
     added++;
   }
   return { data: d, added, skipped };

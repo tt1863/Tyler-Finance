@@ -1,6 +1,7 @@
 import { addMonths, currentMonth, today as todayStr } from './dates';
 import { addAccount, importTransactions, saveTransaction, setAssigned, starterData, updateCategory } from './ops';
 import { saveRule } from './review';
+import { addLoan } from './loans';
 import { saveScheduled } from './scheduled';
 import type { BudgetData } from './types';
 import { READY_TO_ASSIGN } from './types';
@@ -13,7 +14,7 @@ export function demoData(): BudgetData {
   d = addAccount(d, { name: 'Checking', type: 'checking', onBudget: true, balance: 245000, date: `${start}-01` });
   d = addAccount(d, { name: 'Savings', type: 'savings', onBudget: true, balance: 500000, date: `${start}-01` });
   d = addAccount(d, { name: 'Visa', type: 'credit', onBudget: true, balance: -42000, date: `${start}-01` });
-  d = addAccount(d, { name: 'Car Loan', type: 'loan', onBudget: false, balance: -1180000, date: `${start}-01` });
+  d = addLoan(d, { name: 'Car Loan', kind: 'auto', owed: 1180000, date: `${start}-01`, apr: 6.5, payment: 32000 });
   d = addAccount(d, { name: 'Retirement', type: 'asset', onBudget: false, balance: 3250000, date: `${start}-01` });
 
   const acct = (name: string) => d.accounts.find((a) => a.name === name)!.id;
@@ -99,11 +100,11 @@ export function demoData(): BudgetData {
     }
   }
 
-  d = updateCategory(d, cat('Groceries'), { target: { type: 'refill', amount: 60000 } });
+  d = updateCategory(d, cat('Groceries'), { target: { type: 'weekly', amount: 15000, weekday: 0, behavior: 'refill' } });
   d = updateCategory(d, cat('Emergency Fund'), { target: { type: 'balance', amount: 1000000 } });
   d = updateCategory(d, cat('Vacation'), { target: { type: 'byDate', amount: 200000, month: addMonths(now, 8) } });
   d = updateCategory(d, cat('Rent/Mortgage'), { target: { type: 'monthly', amount: 145000 } });
-  d = updateCategory(d, cat('Car Replacement'), { target: { type: 'monthly', amount: 15000 } });
+  d = updateCategory(d, cat('Car Replacement'), { target: { type: 'yearly', amount: 180000, due: '12-31' } });
   const visaPay = d.categories.find((c) => c.ccAccountId === visa)!.id;
   // Fund the card payment so it matches what's owed, and move savings into the emergency fund.
   for (let i = 0; i < 3; i++) d = setAssigned(d, addMonths(start, i), visaPay, i === 0 ? 12000 : 15000);
@@ -129,7 +130,14 @@ export function demoData(): BudgetData {
   ]).data;
 
   // Interest rates and minimum payments for the debt payoff planner.
-  d = { ...d, accounts: d.accounts.map((a) => (a.id === visa ? { ...a, debt: { apr: 22.99, minPayment: 3500 } } : a.name === 'Car Loan' ? { ...a, debt: { apr: 6.5, minPayment: 32000 } } : a)) };
+  d = { ...d, accounts: d.accounts.map((a) => (a.id === visa ? { ...a, debt: { apr: 22.99, minPayment: 3500 } } : a)) };
+
+  // Concert tickets on the Visa that Entertainment can't fully cover: shows
+  // credit overspending (yellow), which becomes card debt.
+  d = saveTransaction(d, { accountId: visa, date: todayStr(), payee: 'Ticket Hub', categoryId: cat('Entertainment'), memo: 'Concert', amount: -18000, cleared: 'uncleared' });
+
+  // Pharmacy visits flagged as reimbursable (HSA), to show flags.
+  d = { ...d, flagNames: { blue: 'Reimbursable' }, transactions: d.transactions.map((t) => (t.payee === 'Pharmacy' ? { ...t, flag: 'blue' as const } : t)) };
 
   // Recurring bills and income, starting from their next date.
   const next = (day: number) => {

@@ -5,10 +5,12 @@ import { syncConfigured } from '../lib/sync/cloud';
 import { emptyData, starterData } from '../lib/ops';
 import { go } from '../lib/route';
 import { useStore } from '../lib/store';
+import { TEMPLATES } from '../lib/templates';
 
 export default function Welcome() {
   const replace = useStore((s) => s.replace);
   const [signingIn, setSigningIn] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const start = (data: ReturnType<typeof emptyData>) => {
     replace(data);
     go('budget');
@@ -34,14 +36,40 @@ export default function Welcome() {
           </li>
         </ol>
         <div className="welcome-actions">
-          <button className="btn primary big" onClick={() => start(starterData())}>
-            Start my budget
-          </button>
+          {choosing ? (
+            <div className="template-pick">
+              <h3>Pick a starting set of categories</h3>
+              <p className="muted small">You can rename, add or remove categories any time.</p>
+              {TEMPLATES.map((t) => (
+                <button key={t.id} className="template-option" onClick={() => start(starterData(t.id))}>
+                  <b>{t.name}</b>
+                  <span className="muted small">{t.description}</span>
+                  <span className="muted small">{Object.keys(t.groups).join(' · ')}</span>
+                </button>
+              ))}
+              <button className="link-btn small" onClick={() => setChoosing(false)}>
+                ← Back
+              </button>
+            </div>
+          ) : (
+            <button className="btn primary big" onClick={() => setChoosing(true)}>
+              Start my budget
+            </button>
+          )}
           <button className="btn big" onClick={() => start(demoData())}>
             Explore with sample data
           </button>
           <button className="link-btn small" onClick={() => start(emptyData())}>
             Start completely blank
+          </button>
+          <button
+            className="link-btn small"
+            onClick={() => {
+              replace(emptyData());
+              go('settings/ynab');
+            }}
+          >
+            Coming from YNAB? Import your YNAB export
           </button>
         </div>
         {syncConfigured &&

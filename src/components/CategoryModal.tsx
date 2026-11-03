@@ -3,16 +3,53 @@ import { addMonths } from '../lib/dates';
 import { parseMoney, toInput } from '../lib/money';
 import { deleteCategory, reorder, updateCategory } from '../lib/ops';
 import { useData, useStore } from '../lib/store';
-import type { Category, Target, TargetType } from '../lib/types';
+import { today } from '../lib/dates';
+import type { Category, Target, TargetBehavior } from '../lib/types';
 import CategorySelect from './CategorySelect';
 import Modal from './Modal';
 
-const TARGETS: { value: TargetType; label: string; help: string }[] = [
-  { value: 'monthly', label: 'Assign each month', help: 'Assign this amount every month (subscriptions, savings).' },
-  { value: 'refill', label: 'Refill up to each month', help: 'Top the category up to this amount each month (groceries, gas).' },
-  { value: 'byDate', label: 'Have a balance by a date', help: 'Save this total by a month, spread evenly (vacation, gifts).' },
-  { value: 'balance', label: 'Have a balance of', help: 'Build up to this balance and keep it (emergency fund).' },
+type Cadence = 'weekly' | 'monthly' | 'yearly' | 'custom' | 'balance';
+
+const CADENCES: { value: Cadence; label: string; help: string }[] = [
+  { value: 'weekly', label: 'Weekly', help: 'An amount every week, e.g. groceries or gas.' },
+  { value: 'monthly', label: 'Monthly', help: 'An amount every month, e.g. bills and subscriptions.' },
+  { value: 'yearly', label: 'Yearly', help: 'An amount due once a year, spread over the months before it.' },
+  { value: 'custom', label: 'Custom date', help: 'An amount due on a date, once or repeating, spread over the months before it.' },
+  { value: 'balance', label: 'Have a balance of', help: 'Build up to a balance and keep it, e.g. an emergency fund.' },
 ];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** Editor state from a saved target (older target types map onto the new choices). */
+function fromTarget(t: Target | undefined, month: string) {
+  const year = month.slice(0, 4);
+  const base = {
+    cadence: 'monthly' as Cadence,
+    behavior: 'setAside' as TargetBehavior,
+    weekday: 1,
+    yearlyDate: `${year}-12-31`,
+    customDate: `${month}-28`,
+    repeat: 'none' as NonNullable<Target['repeat']>,
+    byMonth: false,
+    month: addMonths(month, 6),
+  };
+  if (!t) return base;
+  switch (t.type) {
+    case 'monthly':
+      return { ...base, behavior: t.behavior ?? 'setAside' };
+    case 'refill':
+      return { ...base, behavior: 'refill' as TargetBehavior };
+    case 'weekly':
+      return { ...base, cadence: 'weekly' as Cadence, behavior: t.behavior ?? 'setAside', weekday: t.weekday ?? 1 };
+    case 'yearly':
+      return { ...base, cadence: 'yearly' as Cadence, behavior: t.behavior ?? 'setAside', yearlyDate: `${year}-${t.due ?? '12-31'}` };
+    case 'custom':
+      return { ...base, cadence: 'custom' as Cadence, behavior: t.behavior ?? 'setAside', customDate: t.due ?? base.customDate, repeat: t.repeat ?? 'none' };
+    case 'byDate':
+      return { ...base, cadence: 'balance' as Cadence, byMonth: true, month: t.month ?? base.month };
+    case 'balance':
+      return { ...base, cadence: 'balance' as Cadence };
+  }
+}
 
 export default function CategoryModal({ category, month, onClose }: { category: Category; month: string; onClose: () => void }) {
   const data = useData();
@@ -22,9 +59,9 @@ export default function CategoryModal({ category, month, onClose }: { category: 
   const [groupId, setGroupId] = useState(category.groupId);
   const [note, setNote] = useState(category.note ?? '');
   const [hasTarget, setHasTarget] = useState(!!category.target);
-  const [targetType, setTargetType] = useState<TargetType>(category.target?.type ?? 'monthly');
+  const [form, setForm] = useState(() => fromTarget(category.target, month));
+  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const [targetAmount, setTargetAmount] = useState(toInput(category.target?.amount ?? 0));
-  const [targetMonth, setTargetMonth] = useState(category.target?.month ?? addMonths(month, 6));
   const [deleting, setDeleting] = useState(false);
   const [reassign, setReassign] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -35,7 +72,32 @@ export default function CategoryModal({ category, month, onClose }: { category: 
     if (hasTarget) {
       const amount = parseMoney(targetAmount);
       if (amount === null || amount <= 0) return setError('Enter a target amount.');
-      target = { type: targetType, amount, ...(targetType === 'byDate' ? { month: targetMonth } : {}) };
+      const f = form;
+      switch (f.cadence) {
+        case 'weekly':
+          target = { type: 'weekly', amount, weekday: f.weekday, behavior: f.behavior };
+          break;
+        case 'monthly':
+          target = { type: 'monthly', amount, behavior: f.behavior };
+          break;
+        case 'yearly':
+          target = { type: 'yearly', amount, due: f.yearlyDate.slice(5), behavior: f.behavior };
+          break;
+        case 'custom':
+          if (!f.customDate) return setError('Choose the due date.');
+          target = {
+            type: 'custom',
+            amount,
+            due: f.customDate,
+            repeat: f.repeat,
+            behavior: f.behavior,
+            start: category.target?.type === 'custom' ? (category.target.start ?? month) : month,
+          };
+          break;
+        case 'balance':
+          target = f.byMonth ? { type: 'byDate', amount, month: f.month } : { type: 'balance', amount };
+          break;
+      }
     }
     update((d) => updateCategory(d, category.id, { name: name.trim(), groupId, note: note.trim() || undefined, target }));
     onClose();
@@ -158,28 +220,87 @@ export default function CategoryModal({ category, month, onClose }: { category: 
         {hasTarget && (
           <fieldset className="target-fields">
             <label>
-              Target type
-              <select value={targetType} onChange={(e) => setTargetType(e.target.value as TargetType)}>
-                {TARGETS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+              How often
+              <select value={form.cadence} onChange={(e) => set({ cadence: e.target.value as Cadence })}>
+                {CADENCES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
                   </option>
                 ))}
               </select>
             </label>
-            <p className="hint">{TARGETS.find((t) => t.value === targetType)?.help}</p>
+            <p className="hint">{CADENCES.find((c) => c.value === form.cadence)?.help}</p>
+            {form.cadence !== 'balance' && (
+              <div className="segmented">
+                <button type="button" className={form.behavior === 'setAside' ? 'active' : ''} onClick={() => set({ behavior: 'setAside' })}>
+                  {form.cadence === 'custom' ? 'Set aside' : 'Set aside another'}
+                </button>
+                <button type="button" className={form.behavior === 'refill' ? 'active' : ''} onClick={() => set({ behavior: 'refill' })}>
+                  {form.cadence === 'custom' ? 'Fill up to' : 'Refill up to'}
+                </button>
+              </div>
+            )}
+            {form.cadence !== 'balance' && (
+              <p className="hint">
+                {form.behavior === 'setAside'
+                  ? 'Asks for the full amount each time, even if money is left over (it builds up).'
+                  : 'Only asks for what was spent, topping the category back up to the amount.'}
+              </p>
+            )}
             <div className="row">
               <label>
-                Amount
+                {form.cadence === 'weekly' ? 'Amount per week' : form.cadence === 'balance' ? 'Balance' : 'Amount'}
                 <input inputMode="decimal" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0.00" />
               </label>
-              {targetType === 'byDate' && (
+              {form.cadence === 'weekly' && (
                 <label>
-                  By month
-                  <input type="month" value={targetMonth} onChange={(e) => setTargetMonth(e.target.value)} />
+                  Week starts on
+                  <select value={form.weekday} onChange={(e) => set({ weekday: Number(e.target.value) })}>
+                    {WEEKDAYS.map((w, i) => (
+                      <option key={w} value={i}>
+                        {w}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {form.cadence === 'yearly' && (
+                <label>
+                  By (each year)
+                  <input type="date" value={form.yearlyDate} onChange={(e) => set({ yearlyDate: e.target.value })} />
+                </label>
+              )}
+              {form.cadence === 'custom' && (
+                <label>
+                  Due on
+                  <input type="date" value={form.customDate} min={today().slice(0, 8) + '01'} onChange={(e) => set({ customDate: e.target.value })} />
                 </label>
               )}
             </div>
+            {form.cadence === 'custom' && (
+              <label>
+                Repeat
+                <select value={form.repeat} onChange={(e) => set({ repeat: e.target.value as typeof form.repeat })}>
+                  <option value="none">Don't repeat</option>
+                  <option value="monthly">Every month</option>
+                  <option value="yearly">Every year</option>
+                </select>
+              </label>
+            )}
+            {form.cadence === 'balance' && (
+              <>
+                <label className="checkbox">
+                  <input type="checkbox" checked={form.byMonth} onChange={(e) => set({ byMonth: e.target.checked })} />
+                  <span>By a certain month</span>
+                </label>
+                {form.byMonth && (
+                  <label>
+                    By month
+                    <input type="month" value={form.month} onChange={(e) => set({ month: e.target.value })} />
+                  </label>
+                )}
+              </>
+            )}
           </fieldset>
         )}
         <label>

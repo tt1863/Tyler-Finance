@@ -199,7 +199,11 @@ export default function BankPanel() {
 }
 
 /** App account type and budget/tracking default for a bank account. */
-function appType(a: BankAccount): { type: AccountType; onBudget: boolean } {
+export function appType(a: Pick<BankAccount, 'type' | 'subtype'>): { type: AccountType; onBudget: boolean; creditLine?: boolean } {
+  // Plaid lists lines of credit (incl. home equity) under loans; they budget like cards.
+  if (a.type === 'loan' && (a.subtype === 'line of credit' || a.subtype === 'home equity')) {
+    return { type: 'credit', onBudget: true, creditLine: true };
+  }
   if (a.type === 'credit') return { type: 'credit', onBudget: true };
   if (a.type === 'loan') return { type: 'loan', onBudget: false };
   if (a.type === 'investment') return { type: 'asset', onBudget: false };
@@ -255,12 +259,13 @@ function ChooseAccountsModal({
         let setStartingBalance = false;
         if (c.target === 'new') {
           // Create the app account; its starting balance is set from the bank after importing.
-          const { type, onBudget } = appType(a);
+          const { type, onBudget, creditLine } = appType(a);
           update((d) => {
             const next = addAccount(d, {
               name: `${a.name ?? bankName}${a.mask ? ` ••${a.mask}` : ''}`,
               type,
               onBudget,
+              creditLine,
               balance: 0,
               date: addDays(c.importFrom, -1),
             });

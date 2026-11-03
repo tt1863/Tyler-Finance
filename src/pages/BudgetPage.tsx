@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import CategoryModal from '../components/CategoryModal';
+import { ageOfMoney, agedOutflows } from '../lib/ageOfMoney';
 import GroupModal from '../components/GroupModal';
 import MoneyInput from '../components/MoneyInput';
 import Modal from '../components/Modal';
 import MoveMoneyModal from '../components/MoveMoneyModal';
 import { CategoryQuickBudget, QuickBudgetModal } from '../components/QuickBudget';
-import { categoryMonth, computeBudget, targetStatus, underfundedAmount } from '../lib/budget';
+import { categoryMonth, categoryTargetStatus, computeBudget, underfundedAmount } from '../lib/budget';
 import { addDays, addMonths, currentMonth, monthLabel, today } from '../lib/dates';
 import { fmt } from '../lib/money';
-import { addCategory, addGroup, needsCategory, setAssigned } from '../lib/ops';
+import { addCategory, addGroup, needsCategory, setAssigned, snoozeTarget } from '../lib/ops';
 import { go } from '../lib/route';
 import { upcoming } from '../lib/scheduled';
 import { findTransferPairs } from '../lib/transfers';
@@ -47,9 +48,10 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   }, [data, month]);
 
   const rta = summary.readyToAssign;
+  const age = useMemo(() => ageOfMoney(agedOutflows(data)), [data]);
   const totalUnderfunded = data.categories
     .filter((c) => !c.hidden)
-    .reduce((s, c) => s + underfundedAmount(c, categoryMonth(summary, c.id), month), 0);
+    .reduce((s, c) => s + underfundedAmount(c, categoryMonth(summary, c.id), month, data), 0);
 
   const setMonth = (m: string) => go(`budget/${m}`);
 
@@ -92,6 +94,11 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
             {rta > 0 ? 'Ready to Assign' : rta < 0 ? 'Assigned more than you have' : 'All money assigned'}
           </span>
         </button>
+        {age !== null && (
+          <a className="aom" href="#/reports/age" title="Age of Money">
+            Age of Money <b>{age} day{age === 1 ? '' : 's'}</b>
+          </a>
+        )}
       </div>
 
       {toReview > 0 && (
@@ -105,7 +112,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         </a>
       )}
       {uncategorized > 0 && (
-        <a className="banner warn" href="#/accounts/all">
+        <a className="banner warn" href="#/accounts/all/review">
           {uncategorized} transaction{uncategorized > 1 ? 's' : ''} need{uncategorized === 1 ? 's' : ''} a category →
         </a>
       )}
@@ -160,9 +167,19 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                   </div>
                   {cats.map((c) => {
                     const cm = categoryMonth(summary, c.id);
-                    const ts = c.target ? targetStatus(c.target, cm, month) : null;
+                    const ts = categoryTargetStatus(data, c, cm, month);
+                    // Red: cash overspending (comes out of next month). Yellow: only
+                    // credit overspending (added to the card balance), or a target
+                    // that still needs money.
+                    const creditOnly = cm.available < 0 && cm.creditOverspent >= -cm.available;
                     const pill =
-                      cm.available < 0 ? 'negative' : ts && ts.underfunded > 0 ? 'warning' : cm.available > 0 ? 'positive' : 'zero';
+                      cm.available < 0 && !creditOnly
+                        ? 'negative'
+                        : creditOnly || (ts && ts.underfunded > 0)
+                          ? 'warning'
+                          : cm.available > 0
+                            ? 'positive'
+                            : 'zero';
                     return (
                       <div
                         key={c.id}
@@ -177,12 +194,13 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
                           {ts && (
                             <span className="target-bar" title={`${ts.description}: ${fmt(c.target!.amount)}`}>
                               <span
-                                className={`target-fill ${ts.progress >= 1 ? 'done' : ''}`}
+                                className={`target-fill ${ts.snoozed ? 'snoozed' : ts.progress >= 1 ? 'done' : ''}`}
                                 style={{ width: `${Math.round(ts.progress * 100)}%` }}
                               />
                             </span>
                           )}
                           {ts && ts.underfunded > 0 && <span className="target-note">{fmt(ts.underfunded)} more needed</span>}
+                          {ts?.snoozed && <span className="target-note muted">Snoozed this month</span>}
                         </span>
                         <span className="num">
                           <MoneyInput
@@ -292,7 +310,9 @@ function CategoryInspector({
   onAssign: (v: number) => void;
   inSheet?: boolean;
 }) {
-  const ts = category.target ? targetStatus(category.target, cm, month) : null;
+  const data = useData();
+  const update = useStore((s) => s.update);
+  const ts = categoryTargetStatus(data, category, cm, month);
   return (
     <div className={inSheet ? 'inspector-sheet' : 'card'}>
       {!inSheet && <h3>{category.name}</h3>}
@@ -304,7 +324,7 @@ function CategoryInspector({
         <dt>Activity</dt>
         <dd>{fmt(cm.activity)}</dd>
         <dt>Available</dt>
-        <dd className={cm.available < 0 ? 'neg' : ''}>{fmt(cm.available)}</dd>
+        <dd className={cm.available >= 0 ? '' : cm.creditOverspent >= -cm.available ? 'credit-text' : 'neg'}>{fmt(cm.available)}</dd>
         {upcomingAmount !== 0 && (
           <>
             <dt>Scheduled later this month</dt>
@@ -316,14 +336,30 @@ function CategoryInspector({
       </dl>
       {ts ? (
         <div className="target-box">
-          <b>Target:</b> {ts.description} {fmt(category.target!.amount)}
+          <b>Target: {fmt(category.target!.amount)}</b> · {ts.description}
+          {ts.needed > 0 && <div className="muted small">Needs {fmt(ts.needed)} this month</div>}
           <div className="target-bar wide">
-            <span className={`target-fill ${ts.progress >= 1 ? 'done' : ''}`} style={{ width: `${Math.round(ts.progress * 100)}%` }} />
+            <span className={`target-fill ${ts.snoozed ? 'snoozed' : ts.progress >= 1 ? 'done' : ''}`} style={{ width: `${Math.round(ts.progress * 100)}%` }} />
           </div>
-          {ts.underfunded > 0 ? (
-            <button className="btn primary small" onClick={() => onAssign(cm.assigned + ts.underfunded)}>
-              Assign {fmt(ts.underfunded)} to meet target
-            </button>
+          {ts.snoozed ? (
+            <p className="hint">
+              Snoozed for {monthLabel(month)}. It asks again next month.{' '}
+              <button className="link-btn small" onClick={() => update((d) => snoozeTarget(d, category.id, null))}>
+                Unsnooze
+              </button>
+            </p>
+          ) : ts.underfunded > 0 ? (
+            <div className="toolbar tight">
+              <button className="btn primary small" onClick={() => onAssign(cm.assigned + ts.underfunded)}>
+                Assign {fmt(ts.underfunded)} to meet target
+              </button>
+              {/* Like YNAB: only for the current month, never for card payments. */}
+              {month === currentMonth() && !category.ccAccountId && (
+                <button className="btn small" onClick={() => update((d) => snoozeTarget(d, category.id, month))}>
+                  Snooze this month
+                </button>
+              )}
+            </div>
           ) : (
             <p className="good">✓ On track this month</p>
           )}
@@ -332,9 +368,23 @@ function CategoryInspector({
         <p className="hint">No target yet.</p>
       )}
       {cm.available < 0 && (
-        <button className="btn small" onClick={() => onAssign(cm.assigned - cm.available)}>
-          Cover overspending ({fmt(-cm.available)})
-        </button>
+        <div className="overspent-box">
+          {cm.creditOverspent > 0 && (
+            <p>
+              <b className="credit-text">{fmt(cm.creditOverspent)} overspent on a credit card.</b> It was added to the card's balance
+              as new debt. Cover it to set the money aside for the card bill; otherwise it resets at month end.
+            </p>
+          )}
+          {-cm.available > cm.creditOverspent && (
+            <p>
+              <b className="neg">{fmt(-cm.available - cm.creditOverspent)} overspent in cash.</b> If it isn't covered, it comes out of
+              next month's Ready to Assign.
+            </p>
+          )}
+          <button className="btn small" onClick={() => onAssign(cm.assigned - cm.available)}>
+            Cover overspending ({fmt(-cm.available)})
+          </button>
+        </div>
       )}
       {category.note && <p className="note">{category.note}</p>}
       <CategoryQuickBudget category={category} month={month} />
