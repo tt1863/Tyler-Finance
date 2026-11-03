@@ -104,6 +104,8 @@ export interface Transaction {
   notTransfer?: boolean;
   /** Optional colored flag for grouping across categories. */
   flag?: FlagColor;
+  /** Bank's id for this transaction (OFX FITID), used to skip re-imports. */
+  importId?: string;
 }
 
 export const FLAG_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;

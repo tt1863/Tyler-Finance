@@ -124,7 +124,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
         {account && (
           <>
             <button className="btn" onClick={() => setImporting(true)}>
-              Import CSV
+              Import File
             </button>
             <button className="btn" onClick={() => setReconciling(true)}>
               Reconcile
