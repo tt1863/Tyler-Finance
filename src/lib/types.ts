@@ -102,7 +102,12 @@ export interface Transaction {
   splits?: Split[];
   /** The person said this isn't one side of a transfer; don't suggest it again. */
   notTransfer?: boolean;
+  /** Optional colored flag for grouping across categories. */
+  flag?: FlagColor;
 }
+
+export const FLAG_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
+export type FlagColor = (typeof FLAG_COLORS)[number];
 
 export type Frequency =
   | 'once'
@@ -144,6 +149,8 @@ export interface BudgetData {
   /** Payee name -> last category used, to auto-fill new transactions. */
   payeeCategory: Record<string, string>;
   currency: string;
+  /** Optional names for flag colors, e.g. { blue: 'Reimbursable' }. */
+  flagNames: Partial<Record<FlagColor, string>>;
 }
 
 export const READY_TO_ASSIGN = 'rta';

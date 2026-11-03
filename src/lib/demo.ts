@@ -125,6 +125,9 @@ export function demoData(): BudgetData {
   // credit overspending (yellow), which becomes card debt.
   d = saveTransaction(d, { accountId: visa, date: todayStr(), payee: 'Ticket Hub', categoryId: cat('Entertainment'), memo: 'Concert', amount: -18000, cleared: 'uncleared' });
 
+  // Pharmacy visits flagged as reimbursable (HSA), to show flags.
+  d = { ...d, flagNames: { blue: 'Reimbursable' }, transactions: d.transactions.map((t) => (t.payee === 'Pharmacy' ? { ...t, flag: 'blue' as const } : t)) };
+
   // Recurring bills and income, starting from their next date.
   const next = (day: number) => {
     const thisMonth = `${now}-${String(day).padStart(2, '0')}`;

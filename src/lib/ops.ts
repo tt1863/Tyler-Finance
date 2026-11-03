@@ -2,6 +2,7 @@ import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
 import { uid } from './id';
 import type {
+  FlagColor,
   Split,
   Account,
   AccountType,
@@ -26,13 +27,14 @@ export function emptyData(): BudgetData {
     scheduled: [],
     assigned: {},
     payeeCategory: {},
+    flagNames: {},
     currency: 'USD',
   };
 }
 
 /** Fill in fields added after a budget was first saved. */
 export function normalize(data: BudgetData): BudgetData {
-  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [] };
+  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [], flagNames: data.flagNames ?? {} };
 }
 
 /** A starter set of categories similar to YNAB's defaults. */
@@ -139,6 +141,7 @@ export interface TransactionDraft {
   transferAccountId?: string;
   /** Split across categories. Ignored for transfers. */
   splits?: Split[];
+  flag?: FlagColor;
 }
 
 /**
@@ -164,6 +167,7 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     memo: draft.memo.trim(),
     amount: draft.amount,
     cleared: draft.cleared,
+    ...(draft.flag ? { flag: draft.flag } : {}),
   };
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
