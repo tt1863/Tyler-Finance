@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import AccountForm, { accountTypeLabel } from '../components/AccountForm';
 import { transactionCategoryLabel } from '../components/CategorySelect';
+import { FlagDot } from '../components/FlagPicker';
 import ImportModal from '../components/ImportModal';
+import { flagMatches } from '../lib/flags';
 import ScheduledList from '../components/ScheduledList';
 import TransferSuggestions from '../components/TransferSuggestions';
 import Modal from '../components/Modal';
@@ -47,6 +49,7 @@ export default function AccountPage({ accountId }: { accountId: string }) {
           t.memo.toLowerCase().includes(q) ||
           transactionCategoryLabel(data, t).toLowerCase().includes(q) ||
           t.splits?.some((p) => p.memo.toLowerCase().includes(q)) ||
+          flagMatches(data, t.flag, q) ||
           (t.amount / 100).toFixed(2).includes(q),
       )
       .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
@@ -177,7 +180,8 @@ export default function AccountPage({ accountId }: { accountId: string }) {
               </span>
               <span className="date">{dateLabel(t.date)}</span>
               {isAll && <span className="acct truncate">{accountName.get(t.accountId)}</span>}
-              <span className="payee truncate">{t.payee || <i className="muted">No payee</i>}</span>
+              <span className="payee truncate">
+                <FlagDot data={data} color={t.flag} />{t.payee || <i className="muted">No payee</i>}</span>
               <span className={`category truncate ${needs ? 'needs' : ''}`}>
                 {needs && !t.splits ? 'Needs category' : t.transferAccountId && !t.categoryId ? '' : transactionCategoryLabel(data, t)}
               </span>

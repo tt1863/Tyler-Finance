@@ -62,7 +62,7 @@ export function toRecords(data: BudgetData | null): Map<string, unknown> {
     }
   }
   for (const [payee, catId] of Object.entries(data.payeeCategory)) out.set(recordKey('payee', payee), catId);
-  out.set(recordKey('settings', 'main'), { currency: data.currency });
+  out.set(recordKey('settings', 'main'), { currency: data.currency, flagNames: data.flagNames });
   return out;
 }
 
@@ -94,6 +94,7 @@ export function fromRecords(records: Map<string, unknown>): BudgetData {
         break;
       case 'settings':
         d.currency = (value as { currency?: string }).currency ?? d.currency;
+        d.flagNames = (value as { flagNames?: BudgetData['flagNames'] }).flagNames ?? {};
         break;
     }
   }
