@@ -187,6 +187,8 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     cleared: draft.cleared,
     ...(draft.flag ? { flag: draft.flag } : {}),
   };
+  // Keep the link to the bank transaction so later bank updates find it.
+  if (existing?.bankId) tx.bankId = existing.bankId;
   if (existing?.importId) tx.importId = existing.importId;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {

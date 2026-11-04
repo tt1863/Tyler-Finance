@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { ChooseBudgetModal } from './components/SyncPanel';
-import { startSync } from './lib/sync/cloud';
+import { maybeAutoSync } from './lib/bank/api';
+import { pendingOAuth } from './lib/bank/plaidLink';
+import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
 import CalendarPage from './pages/CalendarPage';
@@ -13,7 +15,7 @@ import Welcome from './pages/Welcome';
 import { today } from './lib/dates';
 import { PREVIEW } from './lib/preview';
 import { applyUpdate, useUpdate } from './lib/updates';
-import { useRoute } from './lib/route';
+import { go, useRoute } from './lib/route';
 import { postLoanInterest } from './lib/loans';
 import { dailyPoint } from './lib/restorePoints';
 import { watchSummary } from './lib/push';
@@ -33,10 +35,26 @@ export default function App() {
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
 
+  // Coming back from a bank's own sign-in page (Chase and other OAuth banks):
+  // linking finishes on the Settings screen, so go there.
+  useEffect(() => {
+    if (pendingOAuth() && route[0] !== 'settings') go('settings');
+  }, []);
+
   useEffect(() => {
     void startSync();
     watchSummary();
   }, []);
+
+  // Check linked banks for new transactions when the app opens or comes back
+  // to the foreground (at most every 30 minutes).
+  const syncStatus = useSync((s) => s.status);
+  useEffect(() => {
+    if (syncStatus === 'synced') maybeAutoSync();
+    const onVisible = () => document.visibilityState === 'visible' && maybeAutoSync();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [syncStatus]);
 
   // Enter scheduled transactions that have come due, on open and whenever the
   // app comes back to the foreground (e.g. reopened from the home screen).

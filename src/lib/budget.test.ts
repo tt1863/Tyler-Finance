@@ -204,3 +204,12 @@ describe('parsing', () => {
     expect(rows.map((r) => r.amount)).toEqual([-1000, 100000]);
   });
 });
+
+describe('imported transactions', () => {
+  it('editing keeps the bank link', () => {
+    let { d, checking, g } = setup();
+    d = { ...d, transactions: [...d.transactions, { id: 'bank-t1', accountId: checking, date: day(3), payee: 'Store', categoryId: null, memo: '', amount: -500, cleared: 'cleared', bankId: 't1' }] };
+    d = saveTransaction(d, { id: 'bank-t1', accountId: checking, date: day(3), payee: 'Store', categoryId: g, memo: 'milk', amount: -500, cleared: 'cleared' });
+    expect(d.transactions.find((t) => t.id === 'bank-t1')).toMatchObject({ bankId: 't1', categoryId: g, memo: 'milk' });
+  });
+});

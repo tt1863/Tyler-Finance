@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
+import BankPanel from '../components/BankPanel';
 import AppearancePanel from '../components/AppearancePanel';
 import NotificationsPanel from '../components/NotificationsPanel';
 import LockPanel from '../components/LockPanel';
@@ -75,6 +76,7 @@ export default function SettingsPage({ section }: { section?: string }) {
       <h1>Settings & Data</h1>
 
       <SyncPanel />
+      <BankPanel />
 
       <AppearancePanel />
 
