@@ -14,6 +14,7 @@ import { PREVIEW } from './lib/preview';
 import { applyUpdate, useUpdate } from './lib/updates';
 import { useRoute } from './lib/route';
 import { postLoanInterest } from './lib/loans';
+import { dailyPoint } from './lib/restorePoints';
 import { processDue } from './lib/scheduled';
 import { useStore } from './lib/store';
 
@@ -35,6 +36,8 @@ export default function App() {
   useEffect(() => {
     const run = () => {
       const current = useStore.getState().data;
+      // A restore point each day the app is used, before any automatic changes.
+      void dailyPoint(current);
       if (current && processDue(current, today()).entered > 0) {
         useStore.getState().update((d) => processDue(d, today()).data);
       }

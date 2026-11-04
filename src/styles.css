@@ -1983,3 +1983,32 @@ button.hbar-row.open .hbar-label {
 .theme-swatch .chip span {
   flex: 1;
 }
+
+/* Restore points */
+.restore-save {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.restore-save input {
+  flex: 1;
+  min-width: 0;
+}
+.restore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.restore-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.restore-list .rp-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
