@@ -16,6 +16,8 @@ import { useRoute } from './lib/route';
 import { postLoanInterest } from './lib/loans';
 import { dailyPoint } from './lib/restorePoints';
 import { processDue } from './lib/scheduled';
+import { useLock, watchBackground } from './lib/lock';
+import LockScreen from './components/LockScreen';
 import { useStore } from './lib/store';
 
 export default function App() {
@@ -24,6 +26,8 @@ export default function App() {
   const route = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
   const updateReady = useUpdate((s) => s.ready);
+  const locked = useLock((s) => s.locked);
+  useEffect(watchBackground, []);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
 
@@ -71,6 +75,8 @@ export default function App() {
       🧪 Preview: <b>{PREVIEW}</b> — test copy with its own data. Your real budget isn't affected.
     </div>
   ) : null;
+
+  if (locked) return <LockScreen />;
 
   if (!data)
     return (
