@@ -125,3 +125,12 @@ export async function dailyPoint(data: BudgetData | null, now = new Date()): Pro
     // Private browsing or storage blocked: restore points just aren't available.
   }
 }
+
+/** Remove every restore point on this device. */
+export function deleteAllPoints(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') return resolve();
+    const req = indexedDB.deleteDatabase(DB);
+    req.onsuccess = req.onerror = req.onblocked = () => resolve();
+  });
+}

@@ -2012,3 +2012,72 @@ button.hbar-row.open .hbar-label {
   flex: 1;
   min-width: 0;
 }
+
+/* App lock */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, var(--nav-bg), var(--primary));
+  overflow-y: auto;
+}
+.lock-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.lock-card .logo {
+  font-size: 2rem;
+}
+.pin-dots {
+  display: flex;
+  gap: 0.75rem;
+  height: 14px;
+}
+.pin-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--text-2);
+}
+.pin-dots span.on {
+  background: var(--text);
+  border-color: var(--text);
+}
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  gap: 0.75rem;
+}
+.keypad .key {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.keypad .key:active {
+  background: var(--border);
+}
+.lock-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
