@@ -29,8 +29,34 @@
   background: var(--bg);
 }
 
+/* Dark mode: chosen in Settings (data-mode, set by src/lib/theme.ts) or,
+   before that runs, from the phone's setting. */
+:root[data-mode='dark'] {
+  color-scheme: dark;
+  --bg: #12141b;
+  --surface: #1b1e28;
+  --surface-2: #232736;
+  --border: #2e3346;
+  --text: #eceef5;
+  --text-2: #b4b9cb;
+  --muted: #7d8399;
+  --nav-bg: #161a2e;
+  --nav-active: #2a3366;
+  --primary: #5c7cfa;
+  --good: #5fd68f;
+  --good-bg: #173b27;
+  --warn: #f2c14e;
+  --warn-bg: #3d3011;
+  --bad: #ff8787;
+  --bad-bg: #4a1d1d;
+  --zero-bg: #2a2e3d;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --shadow: none;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-mode]) {
     color-scheme: dark;
     --bg: #12141b;
     --surface: #1b1e28;
@@ -1660,7 +1686,7 @@ button.hbar-row.open .hbar-label {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: linear-gradient(160deg, var(--nav-bg), #3b5bdb);
+  background: linear-gradient(160deg, var(--nav-bg), var(--primary));
 }
 .welcome-card {
   background: var(--surface);
@@ -1979,4 +2005,228 @@ button.hbar-row.open .hbar-label {
   flex-direction: column;
   gap: 0.5rem;
   margin: 0.75rem 0;
+}
+
+/* Appearance */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.theme-swatch.active {
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.theme-swatch .chip {
+  display: flex;
+  height: 34px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.theme-swatch .chip span {
+  flex: 1;
+}
+
+/* Restore points */
+.restore-save {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.restore-save input {
+  flex: 1;
+  min-width: 0;
+}
+.restore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.restore-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.restore-list .rp-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* App lock */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, var(--nav-bg), var(--primary));
+  overflow-y: auto;
+}
+.lock-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.lock-card .logo {
+  font-size: 2rem;
+}
+.pin-dots {
+  display: flex;
+  gap: 0.75rem;
+  height: 14px;
+}
+.pin-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--text-2);
+}
+.pin-dots span.on {
+  background: var(--text);
+  border-color: var(--text);
+}
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  gap: 0.75rem;
+}
+.keypad .key {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.keypad .key:active {
+  background: var(--border);
+}
+.lock-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Bills & Forecast */
+.calendar-page h1 {
+  margin-bottom: 1rem;
+}
+.banner.bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.banner.good {
+  background: var(--good-bg);
+  color: var(--good);
+}
+.calendar-page .banner {
+  margin: 0.75rem 0;
+}
+.forecast-min {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+.forecast-min input {
+  width: 8rem;
+}
+.cal-nav {
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.cal-head {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 48px;
+  padding: 4px 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cal-day.past {
+  background: none;
+  color: var(--muted);
+}
+.cal-day.today .cal-num {
+  color: var(--primary);
+  font-weight: 700;
+}
+.cal-day.selected {
+  border-color: var(--primary);
+}
+.cal-num {
+  font-size: 0.85rem;
+}
+.cal-amt {
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cal-day-title {
+  margin-top: 1rem;
+}
+button.report-line {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-actions {
+  margin: 0.4rem 0 0.6rem;
 }

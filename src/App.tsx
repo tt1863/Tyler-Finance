@@ -6,6 +6,7 @@ import { pendingOAuth } from './lib/bank/plaidLink';
 import { startSync, useSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
+import CalendarPage from './pages/CalendarPage';
 import DebtPage from './pages/DebtPage';
 import PayeesPage from './pages/PayeesPage';
 import ReportsPage from './pages/ReportsPage';
@@ -16,7 +17,11 @@ import { PREVIEW } from './lib/preview';
 import { applyUpdate, useUpdate } from './lib/updates';
 import { go, useRoute } from './lib/route';
 import { postLoanInterest } from './lib/loans';
+import { dailyPoint } from './lib/restorePoints';
+import { watchSummary } from './lib/push';
 import { processDue } from './lib/scheduled';
+import { useLock, watchBackground } from './lib/lock';
+import LockScreen from './components/LockScreen';
 import { useStore } from './lib/store';
 
 export default function App() {
@@ -25,6 +30,8 @@ export default function App() {
   const route = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
   const updateReady = useUpdate((s) => s.ready);
+  const locked = useLock((s) => s.locked);
+  useEffect(watchBackground, []);
 
   useEffect(() => setMenuOpen(false), [route.join('/')]);
 
@@ -36,6 +43,7 @@ export default function App() {
 
   useEffect(() => {
     void startSync();
+    watchSummary();
   }, []);
 
   // Check linked banks for new transactions when the app opens or comes back
@@ -53,6 +61,8 @@ export default function App() {
   useEffect(() => {
     const run = () => {
       const current = useStore.getState().data;
+      // A restore point each day the app is used, before any automatic changes.
+      void dailyPoint(current);
       if (current && processDue(current, today()).entered > 0) {
         useStore.getState().update((d) => processDue(d, today()).data);
       }
@@ -87,6 +97,8 @@ export default function App() {
     </div>
   ) : null;
 
+  if (locked) return <LockScreen />;
+
   if (!data)
     return (
       <>
@@ -101,6 +113,7 @@ export default function App() {
   if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} mode={route[2]} key={route.slice(1).join('/')} />;
   else if (page === 'reports') content = <ReportsPage key={arg ?? ''} initialTab={arg} />;
   else if (page === 'debt') content = <DebtPage />;
+  else if (page === 'calendar') content = <CalendarPage />;
   else if (page === 'payees') content = <PayeesPage />;
   else if (page === 'settings') content = <SettingsPage section={arg} />;
   else content = <BudgetPage month={arg} />;

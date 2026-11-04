@@ -251,3 +251,9 @@ export async function signOut(removeLocal: boolean) {
   await (await supabase()).auth.signOut();
   if (removeLocal) useStore.getState().replace(null);
 }
+
+/** The Supabase client and user, when signed in (for features beyond sync, like notifications). */
+export async function signedInClient(): Promise<{ sb: SupabaseClient; userId: string } | null> {
+  if (!syncConfigured || !session) return null;
+  return { sb: await supabase(), userId: session.user.id };
+}
