@@ -14,6 +14,7 @@ export type RecordKind =
   | 'scheduled'
   | 'assigned'
   | 'payee'
+  | 'rule'
   | 'settings';
 
 export const recordKey = (kind: string, id: string) => `${kind}/${id}`;
@@ -62,6 +63,7 @@ export function toRecords(data: BudgetData | null): Map<string, unknown> {
     }
   }
   for (const [payee, catId] of Object.entries(data.payeeCategory)) out.set(recordKey('payee', payee), catId);
+  data.payeeRules.forEach((r, sort) => out.set(recordKey('rule', r.id), { ...r, sort }));
   out.set(recordKey('settings', 'main'), { currency: data.currency, flagNames: data.flagNames });
   return out;
 }
@@ -69,13 +71,14 @@ export function toRecords(data: BudgetData | null): Map<string, unknown> {
 /** Rebuild a budget from records. */
 export function fromRecords(records: Map<string, unknown>): BudgetData {
   const d = emptyData();
-  const sorted: Record<'account' | 'group' | 'category', { sort: number }[]> = { account: [], group: [], category: [] };
+  const sorted: Record<'account' | 'group' | 'category' | 'rule', { sort: number }[]> = { account: [], group: [], category: [], rule: [] };
   for (const [key, value] of records) {
     const { kind, id } = splitKey(key);
     switch (kind) {
       case 'account':
       case 'group':
       case 'category':
+      case 'rule':
         sorted[kind].push(value as { sort: number });
         break;
       case 'transaction':
@@ -103,6 +106,7 @@ export function fromRecords(records: Map<string, unknown>): BudgetData {
   d.accounts = strip(sorted.account);
   d.groups = strip(sorted.group);
   d.categories = strip(sorted.category);
+  d.payeeRules = strip(sorted.rule);
   d.transactions.sort((a, b) => a.date.localeCompare(b.date));
   return normalize(d);
 }
