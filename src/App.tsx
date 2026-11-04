@@ -4,6 +4,7 @@ import { ChooseBudgetModal } from './components/SyncPanel';
 import { startSync } from './lib/sync/cloud';
 import AccountPage from './pages/AccountPage';
 import BudgetPage from './pages/BudgetPage';
+import CalendarPage from './pages/CalendarPage';
 import DebtPage from './pages/DebtPage';
 import PayeesPage from './pages/PayeesPage';
 import ReportsPage from './pages/ReportsPage';
@@ -92,6 +93,7 @@ export default function App() {
   if (page === 'accounts') content = <AccountPage accountId={arg ?? 'all'} mode={route[2]} key={route.slice(1).join('/')} />;
   else if (page === 'reports') content = <ReportsPage key={arg ?? ''} initialTab={arg} />;
   else if (page === 'debt') content = <DebtPage />;
+  else if (page === 'calendar') content = <CalendarPage />;
   else if (page === 'payees') content = <PayeesPage />;
   else if (page === 'settings') content = <SettingsPage section={arg} />;
   else content = <BudgetPage month={arg} />;

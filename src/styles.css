@@ -2081,3 +2081,94 @@ button.hbar-row.open .hbar-label {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* Bills & Forecast */
+.calendar-page h1 {
+  margin-bottom: 1rem;
+}
+.banner.bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.banner.good {
+  background: var(--good-bg);
+  color: var(--good);
+}
+.calendar-page .banner {
+  margin: 0.75rem 0;
+}
+.forecast-min {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+.forecast-min input {
+  width: 8rem;
+}
+.cal-nav {
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.cal-head {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 48px;
+  padding: 4px 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cal-day.past {
+  background: none;
+  color: var(--muted);
+}
+.cal-day.today .cal-num {
+  color: var(--primary);
+  font-weight: 700;
+}
+.cal-day.selected {
+  border-color: var(--primary);
+}
+.cal-num {
+  font-size: 0.85rem;
+}
+.cal-amt {
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cal-day-title {
+  margin-top: 1rem;
+}
+button.report-line {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-actions {
+  margin: 0.4rem 0 0.6rem;
+}
