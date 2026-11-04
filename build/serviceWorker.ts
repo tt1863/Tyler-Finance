@@ -47,6 +47,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Push notifications (see supabase/functions/push). The payload is
+// { title, body, url } where url is a screen like "#/calendar".
+self.addEventListener('push', (event) => {
+  let msg = {};
+  try { msg = event.data ? event.data.json() : {}; } catch (e) { msg = { body: event.data && event.data.text() }; }
+  event.waitUntil(
+    self.registration.showNotification(msg.title || 'Tyler Finance', {
+      body: msg.body || '',
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: msg.tag || 'tyler-finance',
+      data: { url: msg.url || '#/budget' },
+    }),
+  );
+});
+
+// Tapping a notification opens (or focuses) the app on the right screen.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(SCOPE + (event.notification.data && event.notification.data.url || ''), self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).pathname.startsWith(SCOPE) && 'focus' in c) {
+          return c.navigate(target).then((w) => (w || c).focus()).catch(() => c.focus());
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});
+
 // The page asks the waiting worker to take over when the person taps "Update".
 self.addEventListener('message', (event) => {
   if (event.data === 'skip-waiting') self.skipWaiting();
