@@ -16,6 +16,7 @@ import { applyUpdate, useUpdate } from './lib/updates';
 import { useRoute } from './lib/route';
 import { postLoanInterest } from './lib/loans';
 import { dailyPoint } from './lib/restorePoints';
+import { watchSummary } from './lib/push';
 import { processDue } from './lib/scheduled';
 import { useLock, watchBackground } from './lib/lock';
 import LockScreen from './components/LockScreen';
@@ -34,6 +35,7 @@ export default function App() {
 
   useEffect(() => {
     void startSync();
+    watchSummary();
   }, []);
 
   // Enter scheduled transactions that have come due, on open and whenever the
