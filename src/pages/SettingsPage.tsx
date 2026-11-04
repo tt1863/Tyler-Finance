@@ -2,13 +2,18 @@ import { useRef } from 'react';
 import { categoryName } from '../components/CategorySelect';
 import BankPanel from '../components/BankPanel';
 import RulesPanel from '../components/RulesPanel';
+import AppearancePanel from '../components/AppearancePanel';
+import NotificationsPanel from '../components/NotificationsPanel';
+import LockPanel from '../components/LockPanel';
 import FlagsPanel from '../components/FlagsPanel';
+import RestorePanel from '../components/RestorePanel';
 import SyncPanel from '../components/SyncPanel';
 import TemplatesPanel from '../components/TemplatesPanel';
 import YnabImport from '../components/YnabImport';
 import { signOut, useSync } from '../lib/sync/cloud';
 import { today } from '../lib/dates';
 import { csvCell, download } from '../lib/download';
+import { makePoint, savePoint } from '../lib/restorePoints';
 import { demoData } from '../lib/demo';
 import { setCurrency } from '../lib/money';
 import { useData, useStore } from '../lib/store';
@@ -58,7 +63,8 @@ export default function SettingsPage({ section }: { section?: string }) {
     try {
       const parsed = JSON.parse(await file.text()) as BudgetData;
       if (parsed.version !== 1 || !Array.isArray(parsed.transactions)) throw new Error('bad file');
-      if (!confirm('Replace all current data with this backup?')) return;
+      if (!confirm('Replace all current data with this backup? Your current budget is saved as a restore point first.')) return;
+      await savePoint(makePoint(data, 'before-restore')).catch(() => undefined);
       replace(parsed);
       alert('Backup restored.');
     } catch {
@@ -73,6 +79,12 @@ export default function SettingsPage({ section }: { section?: string }) {
       <SyncPanel />
       <BankPanel />
       <RulesPanel />
+
+      <AppearancePanel />
+
+      <LockPanel />
+
+      <NotificationsPanel />
 
       <YnabImport autoOpen={section === 'ynab'} />
 
@@ -149,6 +161,8 @@ export default function SettingsPage({ section }: { section?: string }) {
           {data.accounts.length} accounts · {data.categories.length} categories · {data.transactions.length} transactions
         </p>
       </section>
+
+      <RestorePanel />
 
       <section className="card danger-zone">
         <h3>Start over</h3>

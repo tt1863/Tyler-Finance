@@ -39,6 +39,10 @@ Live at https://tt1863.github.io/Tyler-Finance/ — every push to `main` deploys
   the rest is `creditOverspent` (yellow), which resets at month end without reducing
   Ready to Assign. Cash overspending (red) comes out of next month.
 
+- Push notifications: the app uploads a summary (`src/lib/pushSummary.ts`) to `push_summaries`;
+  `supabase/functions/push` runs hourly (pg_cron, `supabase/push.sql`) and sends a daily digest using
+  `_shared/digest.ts`. VAPID keys are made by the function and kept in `push_config`. The service
+  worker template handles `push` and `notificationclick`.
 - Offline: `build/serviceWorker.ts` (Vite plugin) writes `dist/sw.js`, which saves every file
   of the build (cache per scope + build hash); `src/lib/updates.ts` registers it and shows the
   "new version" bar. Cache lookups must use `ignoreVary` (module scripts send `Origin`).
