@@ -1,7 +1,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { setCurrency } from '../money';
-import { PREVIEW } from '../preview';
+import { PREVIEW, STORAGE_KEY } from '../preview';
 import { useStore } from '../store';
 import type { BudgetData } from '../types';
 import { adoptRemote, freshState, replaceRemote, syncOnce, type SyncState } from './engine';
@@ -9,10 +9,15 @@ import { SupabaseRemote } from './supabaseRemote';
 
 const URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
-// Previews never sync, so testing a pull request can't change the real budget.
-export const syncConfigured = Boolean(URL && KEY) && !PREVIEW;
+export const syncConfigured = Boolean(URL && KEY);
 
-const STATE_KEY = 'tyler-finance-sync';
+// Previews keep their own sign-in and sync memory (and must use a test
+// account), so testing a pull request can't change the real budget.
+const STATE_KEY = `${STORAGE_KEY}-sync`;
+const AUTH_KEY = `${STORAGE_KEY}-auth`;
+export const EMAIL_KEY = `${STORAGE_KEY}-email`;
+/** The email used in the real app on this device (previews refuse it). */
+const REAL_EMAIL_KEY = 'tyler-finance-email';
 const PUSH_DELAY_MS = 1200;
 
 export type SyncStatus = 'disabled' | 'signed-out' | 'syncing' | 'synced' | 'offline' | 'error' | 'choose';
@@ -32,10 +37,19 @@ async function supabase(): Promise<SupabaseClient> {
   if (!client) {
     const { createClient } = await import('@supabase/supabase-js');
     client ??= createClient(URL, KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'tyler-finance-auth' },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: AUTH_KEY },
     });
   }
   return client;
+}
+
+/** The Supabase client, for features that call the server (linked banks). */
+export const getSupabase = supabase;
+
+/** Resolves once any sync in progress (and any queued after it) has finished. */
+export async function waitForSync() {
+  await syncNow();
+  for (let i = 0; i < 100 && (running || again); i++) await new Promise((r) => setTimeout(r, 100));
 }
 
 // --- State kept between syncs -------------------------------------------------
@@ -193,7 +207,7 @@ function stopListening() {
 export async function startSync() {
   if (!syncConfigured) return;
   // Only load the library at startup if this device has signed in before.
-  if (!localStorage.getItem('tyler-finance-auth')) return;
+  if (!localStorage.getItem(AUTH_KEY)) return;
   await watchAuth();
 }
 
@@ -215,6 +229,9 @@ async function watchAuth() {
 
 /** Email a 6-digit sign-in code. */
 export async function sendCode(email: string) {
+  if (PREVIEW && email.trim().toLowerCase() === (localStorage.getItem(REAL_EMAIL_KEY) ?? '').toLowerCase()) {
+    throw new Error('This is a test copy. Use a test address (like you+test@gmail.com), not the email for your real budget.');
+  }
   await watchAuth();
   const { error } = await (await supabase()).auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   if (error) throw error;

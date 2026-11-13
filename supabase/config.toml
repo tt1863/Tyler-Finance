@@ -1,6 +1,12 @@
 # Supabase CLI settings, used by the GitHub Action that deploys the server functions.
 project_id = "ojmtamizbzlzgqkkoopc"
 
-# Functions check the signed-in user themselves (or need no sign-in).
+# Each function checks the signed-in user (or the Plaid webhook) itself, or needs no sign-in.
+[functions.bank]
+verify_jwt = false
+
+[functions.bank-webhook]
+verify_jwt = false
+
 [functions.push]
 verify_jwt = false

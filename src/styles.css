@@ -943,6 +943,64 @@ textarea:focus {
   grid-template-rows: auto 1fr;
 }
 
+/* Linked banks */
+.bank-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+}
+.bank-item.login_required,
+.bank-item.error {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
+}
+.bank-item .toolbar {
+  margin: 0.5rem 0 0;
+}
+.bank-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.bank-accounts {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+.bank-accounts li {
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem 0;
+  border-top: 1px dashed var(--border);
+}
+.bank-choice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.bank-choice legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0 0.3rem;
+}
+.bank-choice > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.bank-mark {
+  font-size: 0.8em;
+}
+
 /* New version available */
 .update-bar {
   position: fixed;

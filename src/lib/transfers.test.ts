@@ -110,9 +110,10 @@ describe('linking a transfer', () => {
     d = add(d, chk, -50000, day(2), 'x');
     d = add(d, sav, 50000, day(2), 'y');
     const [p] = findTransferPairs(d);
-    d = { ...d, transactions: d.transactions.map((t) => (t.id === p.to.id ? { ...t, cleared: 'reconciled' as const } : t)) };
+    d = { ...d, transactions: d.transactions.map((t) => (t.id === p.to.id ? { ...t, cleared: 'reconciled' as const, bankId: 'plaid-in' } : t.id === p.from.id ? { ...t, bankId: 'plaid-out' } : t)) };
     d = linkAsTransfer(d, p.from.id, p.to.id);
     d = saveTransaction(d, { id: p.from.id, accountId: chk, date: day(2), payee: 'Transfer : Savings', categoryId: null, memo: 'monthly savings', amount: -50000, cleared: 'cleared', transferAccountId: sav });
-    expect(d.transactions.find((t) => t.id === p.to.id)).toMatchObject({ cleared: 'reconciled', memo: 'monthly savings', amount: 50000 });
+    expect(d.transactions.find((t) => t.id === p.to.id)).toMatchObject({ cleared: 'reconciled', memo: 'monthly savings', amount: 50000, bankId: 'plaid-in' });
+    expect(d.transactions.find((t) => t.id === p.from.id)).toMatchObject({ bankId: 'plaid-out' });
   });
 });

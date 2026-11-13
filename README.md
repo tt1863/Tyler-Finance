@@ -37,6 +37,9 @@ them, and move money around when plans change.
 - **Sync across devices** (optional) — sign in with an emailed 6-digit code to
   keep the budget in sync on phone, tablet and computer via Supabase. Works
   offline; changes merge item by item. See "Cloud sync setup" below.
+- **Linked banks** (Plaid) — link bank and card accounts in Settings; new
+  transactions import automatically, pending charges update when they post,
+  and hand-entered transactions are matched instead of duplicated.
 - **Works offline** — the app saves itself on the device, opens instantly and
   works without signal; a "new version is ready" bar offers updates.
 - **Data** — saved in your browser; export/restore JSON backups, export CSV, undo
@@ -84,4 +87,4 @@ The core logic lives in `src/lib/budget.ts` (calculations) and `src/lib/ops.ts`
 
 ## Not yet built
 
-Bank syncing and age-of-money.
+Age-of-money.

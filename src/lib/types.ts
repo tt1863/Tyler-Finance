@@ -116,6 +116,8 @@ export interface Transaction {
   transferTxId?: string;
   /** When set, the amount is divided across categories (categoryId is null). */
   splits?: Split[];
+  /** Bank (Plaid) transaction this came from or was matched to. */
+  bankId?: string;
   /** The person said this isn't one side of a transfer; don't suggest it again. */
   notTransfer?: boolean;
   /** Optional colored flag for grouping across categories. */

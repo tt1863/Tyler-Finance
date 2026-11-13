@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { chooseBudget, sendCode, signOut, syncConfigured, syncNow, useSync, verifyCode } from '../lib/sync/cloud';
+import { PREVIEW } from '../lib/preview';
+import { chooseBudget, EMAIL_KEY, sendCode, signOut, syncConfigured, syncNow, useSync, verifyCode } from '../lib/sync/cloud';
 import Modal from './Modal';
 
 function ago(ts?: number) {
@@ -12,7 +13,7 @@ function ago(ts?: number) {
 
 /** Email + 6-digit code sign-in. */
 export function SignInForm() {
-  const [email, setEmail] = useState(localStorage.getItem('tyler-finance-email') ?? '');
+  const [email, setEmail] = useState(localStorage.getItem(EMAIL_KEY) ?? '');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
@@ -24,7 +25,7 @@ export function SignInForm() {
     setError('');
     try {
       await sendCode(email.trim());
-      localStorage.setItem('tyler-finance-email', email.trim());
+      localStorage.setItem(EMAIL_KEY, email.trim());
       setStep('code');
     } catch (e) {
       setError((e as Error).message);
@@ -47,6 +48,12 @@ export function SignInForm() {
 
   return step === 'email' ? (
     <form className="form" onSubmit={(e) => (e.preventDefault(), send())}>
+      {PREVIEW && (
+        <p className="banner warn">
+          Test copy: sign in with a <b>test address</b> such as <b>you+test@gmail.com</b> (it arrives in your normal inbox), never the email
+          for your real budget.
+        </p>
+      )}
       <label>
         Email
         <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
