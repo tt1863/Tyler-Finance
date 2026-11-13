@@ -1,3 +1,5 @@
+import { findRule, type PayeeRule } from './payeeRules.ts';
+
 /**
  * Turns bank transactions from Plaid into the app's budget transactions.
  * Pure logic (no network), shared by the server functions and unit tests.
@@ -30,6 +32,10 @@ export interface AppTxn {
   splits?: { categoryId: string | null; amount: number; memo: string }[];
   /** Plaid transaction id this transaction came from or was matched to. */
   bankId?: string;
+  /** The bank's own description, before payee rules. */
+  bankPayee?: string;
+  /** false = imported and waiting for the person to review it. */
+  approved?: boolean;
 }
 
 export interface AccountLink {
@@ -51,6 +57,8 @@ export interface PlanInput {
   payeeCategory: Record<string, string>;
   /** Bank transaction ids the user deleted after import; never re-add them. */
   deletedBankIds?: Set<string>;
+  /** Payee rules (rename + category). */
+  rules?: PayeeRule[];
 }
 
 export interface PlanOutput {
@@ -122,17 +130,25 @@ export function planImport(input: PlanInput): PlanOutput {
       return;
     }
 
-    const payee = (p.merchant_name || p.name || '').trim();
+    // A rule may match either the clean merchant name or the bank's full description.
+    const merchant = (p.merchant_name || p.name || '').trim();
+    const description = (p.name || merchant).trim();
+    const rules = input.rules ?? [];
+    const rule = findRule(rules, merchant) ?? findRule(rules, description);
+    const payee = rule?.rename?.trim() || merchant;
+    const categoryId = rule?.categoryId ?? input.payeeCategory[payee] ?? input.payeeCategory[merchant] ?? null;
     save({
       id: `bank-${p.transaction_id}`,
       accountId: link.appAccountId,
       date: p.date,
       payee,
-      categoryId: input.payeeCategory[payee] ?? null,
+      categoryId,
       memo: '',
       amount,
       cleared: p.pending ? 'uncleared' : 'cleared',
       bankId: p.transaction_id,
+      bankPayee: description,
+      approved: false,
     });
   };
 

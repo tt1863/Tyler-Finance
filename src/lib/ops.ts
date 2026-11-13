@@ -1,5 +1,6 @@
 import { categoryMonth, computeBudget, underfundedAmount } from './budget';
 import { today } from './dates';
+import { applyRules } from '../../supabase/functions/_shared/payeeRules';
 import { uid } from './id';
 import { templateById } from './templates';
 import type {
@@ -28,6 +29,7 @@ export function emptyData(): BudgetData {
     scheduled: [],
     assigned: {},
     payeeCategory: {},
+    payeeRules: [],
     flagNames: {},
     currency: 'USD',
   };
@@ -35,7 +37,13 @@ export function emptyData(): BudgetData {
 
 /** Fill in fields added after a budget was first saved. */
 export function normalize(data: BudgetData): BudgetData {
-  return { ...emptyData(), ...data, scheduled: data.scheduled ?? [], flagNames: data.flagNames ?? {} };
+  return {
+    ...emptyData(),
+    ...data,
+    scheduled: data.scheduled ?? [],
+    payeeRules: data.payeeRules ?? [],
+    flagNames: data.flagNames ?? {},
+  };
 }
 
 /** A new budget with a template's categories (default: the standard set). */
@@ -188,7 +196,9 @@ export function saveTransaction(data: BudgetData, draft: TransactionDraft): Budg
     ...(draft.flag ? { flag: draft.flag } : {}),
   };
   // Keep the link to the bank transaction so later bank updates find it.
+  // (Saving also counts as reviewing it, so it's no longer marked unapproved.)
   if (existing?.bankId) tx.bankId = existing.bankId;
+  if (existing?.bankPayee) tx.bankPayee = existing.bankPayee;
   if (existing?.importId) tx.importId = existing.importId;
 
   if (draft.transferAccountId && draft.transferAccountId !== draft.accountId) {
@@ -415,7 +425,11 @@ export interface ImportRow {
   importId?: string;
 }
 
-/** Import bank transactions, skipping likely duplicates and auto-filling categories by payee. */
+/**
+ * Import bank transactions from a CSV file, skipping likely duplicates. Payee
+ * rules and remembered categories fill in payees and categories, and the new
+ * transactions wait for review like linked-bank imports.
+ */
 export function importTransactions(
   data: BudgetData,
   accountId: string,
@@ -427,7 +441,8 @@ export function importTransactions(
   const seen = new Map<string, number>();
   for (const t of d.transactions) {
     if (t.accountId !== accountId) continue;
-    const k = key(t.date, t.amount, t.payee);
+    // Compare against the bank's original wording when a rule renamed it.
+    const k = key(t.date, t.amount, t.bankPayee ?? t.payee);
     seen.set(k, (seen.get(k) ?? 0) + 1);
   }
   const seenIds = new Set(
@@ -447,15 +462,18 @@ export function importTransactions(
       skipped++;
       continue;
     }
+    const { payee, categoryId } = applyRules(d.payeeRules, r.payee, d.payeeCategory);
     d.transactions.push({
       id: uid(),
       accountId,
       date: r.date,
-      payee: r.payee,
-      categoryId: d.payeeCategory[r.payee] ?? null,
+      payee,
+      categoryId,
       memo: r.memo,
       amount: r.amount,
       cleared: 'cleared',
+      bankPayee: r.payee,
+      approved: false,
       ...(r.importId ? { importId: r.importId } : {}),
     });
     if (r.importId) seenIds.add(r.importId);

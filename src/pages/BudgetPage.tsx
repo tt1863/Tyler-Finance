@@ -33,6 +33,7 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
   const [sheet, setSheet] = useState<string | null>(null);
   const uncategorized = useMemo(() => needsCategory(data).length, [data]);
   const possibleTransfers = useMemo(() => findTransferPairs(data).length, [data]);
+  const toReview = useMemo(() => data.transactions.filter((t) => t.approved === false).length, [data.transactions]);
   // Scheduled transactions still to come in this month, by category.
   const upcomingByCat = useMemo(() => {
     const start = month === currentMonth() ? today() : `${month}-01`;
@@ -100,6 +101,11 @@ export default function BudgetPage({ month: monthArg }: { month?: string }) {
         )}
       </div>
 
+      {toReview > 0 && (
+        <a className="banner info" href="#/accounts">
+          📥 {toReview} new transaction{toReview > 1 ? 's' : ''} to review →
+        </a>
+      )}
       {possibleTransfers > 0 && (
         <a className="banner info" href="#/accounts">
           🔁 {possibleTransfers} possible transfer{possibleTransfers > 1 ? 's' : ''} to review →

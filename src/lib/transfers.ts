@@ -75,6 +75,8 @@ export function linkAsTransfer(data: BudgetData, fromId: string, toId: string): 
   const sameKind = fromAcct?.onBudget === toAcct?.onBudget;
   const side = (t: Transaction, other: Transaction, acct = accounts.get(t.accountId)): Transaction => ({
     ...t,
+    // Linking counts as reviewing it.
+    approved: undefined,
     payee: `Transfer : ${accounts.get(other.accountId)?.name ?? ''}`,
     // Keep the bank's description so nothing is lost.
     memo: t.memo || t.payee,

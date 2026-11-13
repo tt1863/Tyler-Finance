@@ -4,6 +4,7 @@ import CategorySelect, { transactionCategoryLabel } from '../components/Category
 import { FlagDot } from '../components/FlagPicker';
 import BulkBar from '../components/BulkBar';
 import ImportModal from '../components/ImportModal';
+import ReviewList from '../components/ReviewList';
 import { FLAG_COLORS, flagLabel } from '../lib/flags';
 import { EMPTY_FILTER, isFiltering, matches, totals, type TxFilter } from '../lib/search';
 import ScheduledList from '../components/ScheduledList';
@@ -147,6 +148,7 @@ export default function AccountPage({ accountId, mode }: { accountId: string; mo
         </button>
       </div>
 
+      <ReviewList accountId={accountId} onOpen={setEditing} />
       {showFilters && (
         <div className="filter-panel">
           <label className="wide">
@@ -223,7 +225,7 @@ export default function AccountPage({ accountId, mode }: { accountId: string; mo
         {rows.slice(0, limit).map((t) => {
           const needs = uncategorizedIds.has(t.id);
           return (
-            <div key={t.id} className={`reg-row ${selected.has(t.id) ? 'selected' : ''}`} onClick={() => setEditing(t)}>
+            <div key={t.id} className={`reg-row ${selected.has(t.id) ? 'selected' : ''} ${t.approved === false ? 'unapproved' : ''}`} onClick={() => setEditing(t)}>
               <span onClick={(e) => e.stopPropagation()}>
                 <input type="checkbox" aria-label="Select" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} />
               </span>

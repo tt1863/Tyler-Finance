@@ -1,5 +1,6 @@
 import { addMonths, currentMonth, today as todayStr } from './dates';
-import { addAccount, saveTransaction, setAssigned, starterData, updateCategory } from './ops';
+import { addAccount, importTransactions, saveTransaction, setAssigned, starterData, updateCategory } from './ops';
+import { saveRule } from './review';
 import { addLoan } from './loans';
 import { saveScheduled } from './scheduled';
 import type { BudgetData } from './types';
@@ -118,6 +119,15 @@ export function demoData(): BudgetData {
   ] as const) {
     d = saveTransaction(d, { accountId: account, date: `${lastMonth}-20`, payee, categoryId: null, memo: '', amount, cleared: 'cleared' });
   }
+
+  // A few bank imports waiting for review, cleaned up by payee rules.
+  d = saveRule(d, { match: 'BLUE BOTTLE', matchType: 'contains', rename: 'Blue Bottle', categoryId: cat('Dining Out') }).data;
+  d = saveRule(d, { match: 'SHELL OIL', matchType: 'contains', rename: 'Shell' }).data;
+  d = importTransactions(d, visa, [
+    { date: todayStr(), payee: 'SQ *BLUE BOTTLE 0423', memo: '', amount: -675 },
+    { date: todayStr(), payee: 'SHELL OIL 57444 11/01', memo: '', amount: -4890 },
+    { date: todayStr(), payee: 'AMZN Mktp US*2K4LX9', memo: '', amount: -2399 },
+  ]).data;
 
   // Interest rates and minimum payments for the debt payoff planner.
   d = { ...d, accounts: d.accounts.map((a) => (a.id === visa ? { ...a, debt: { apr: 22.99, minPayment: 3500 } } : a)) };
